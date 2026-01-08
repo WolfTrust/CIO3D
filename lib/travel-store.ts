@@ -14,6 +14,7 @@ export interface TravelLocation {
   notes?: string
   rating?: number
   favorite?: boolean
+  coordinates?: [number, number] // [latitude, longitude]
 }
 
 export interface TripData {

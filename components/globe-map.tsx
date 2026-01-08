@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useRef, useEffect, useState, useCallback, useMemo, useImperativeHandle, forwardRef } from "react"
-import { useTravelStore, type TravelStatus } from "@/lib/travel-store"
+import { useTravelStore, type TravelStatus, type TravelLocation } from "@/lib/travel-store"
 import { countries, alpha3ToCountryId } from "@/lib/countries-data"
 import * as d3 from "d3"
 import * as topojson from "topojson-client"
@@ -17,6 +17,14 @@ export interface GlobeMapHandle {
   flyToCountry: (countryId: string) => void
 }
 
+interface LocationPin {
+  id: string
+  name: string
+  countryId: string
+  coordinates: [number, number]
+  type: TravelLocation["type"]
+}
+
 export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function GlobeMap({ onCountryClick }, ref) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -24,6 +32,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
   const [rotation, setRotation] = useState<[number, number, number]>([0, -20, 0])
   const [isDragging, setIsDragging] = useState(false)
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null)
+  const [hoveredPin, setHoveredPin] = useState<LocationPin | null>(null)
 
   const velocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const lastPosRef = useRef<{ x: number; y: number; time: number } | null>(null)
@@ -33,6 +42,27 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
   const flyAnimationRef = useRef<number | null>(null)
 
   const travels = useTravelStore((state) => state.travels)
+  const tripData = useTravelStore((state) => state.tripData)
+
+  const locationPins = useMemo((): LocationPin[] => {
+    const pins: LocationPin[] = []
+    Object.entries(tripData).forEach(([countryId, data]) => {
+      if (data.locations) {
+        data.locations.forEach((loc) => {
+          if (loc.coordinates) {
+            pins.push({
+              id: loc.id,
+              name: loc.name,
+              countryId,
+              coordinates: loc.coordinates,
+              type: loc.type,
+            })
+          }
+        })
+      }
+    })
+    return pins
+  }, [tripData])
 
   // Load world GeoJSON data
   useEffect(() => {
@@ -298,6 +328,23 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     }
   }, [])
 
+  const getPinColor = useCallback((type: TravelLocation["type"]): string => {
+    switch (type) {
+      case "city":
+        return "#ef4444" // red
+      case "landmark":
+        return "#f97316" // orange
+      case "nature":
+        return "#22c55e" // green
+      case "beach":
+        return "#06b6d4" // cyan
+      case "mountain":
+        return "#8b5cf6" // purple
+      default:
+        return "#ec4899" // pink
+    }
+  }, [])
+
   useEffect(() => {
     if (!isDragging && velocityRef.current.x === 0 && velocityRef.current.y === 0) {
       const autoRotate = () => {
@@ -463,6 +510,21 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#93c5fd").attr("stop-opacity", "0.25")
     atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#bfdbfe").attr("stop-opacity", "0.4")
 
+    const pinShadow = defs
+      .append("filter")
+      .attr("id", "pin-shadow")
+      .attr("x", "-50%")
+      .attr("y", "-50%")
+      .attr("width", "200%")
+      .attr("height", "200%")
+    pinShadow
+      .append("feDropShadow")
+      .attr("dx", "0")
+      .attr("dy", "2")
+      .attr("stdDeviation", "2")
+      .attr("flood-color", "#000")
+      .attr("flood-opacity", "0.5")
+
     const projection = d3
       .geoOrthographic()
       .scale(size / 2.05)
@@ -537,6 +599,56 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         handleCountryClickInternal(d.id)
       })
 
+    const pinsGroup = svg.append("g").attr("class", "pins")
+
+    locationPins.forEach((pin) => {
+      // Convert lat/lng to x/y using projection
+      // D3 expects [longitude, latitude]
+      const projected = projection([pin.coordinates[1], pin.coordinates[0]])
+
+      if (projected) {
+        const [x, y] = projected
+
+        // Check if point is on visible side of globe
+        const distance = d3.geoDistance([pin.coordinates[1], pin.coordinates[0]], [-rotation[0], -rotation[1]])
+
+        if (distance < Math.PI / 2) {
+          const pinGroup = pinsGroup
+            .append("g")
+            .attr("class", "pin")
+            .attr("transform", `translate(${x}, ${y})`)
+            .style("cursor", "pointer")
+            .attr("filter", "url(#pin-shadow)")
+
+          // Pin shape (teardrop/marker style)
+          pinGroup
+            .append("path")
+            .attr("d", "M0,-12 C-4,-12 -6,-8 -6,-5 C-6,0 0,6 0,6 C0,6 6,0 6,-5 C6,-8 4,-12 0,-12 Z")
+            .attr("fill", getPinColor(pin.type))
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 1.5)
+
+          // Inner circle
+          pinGroup.append("circle").attr("cx", 0).attr("cy", -5).attr("r", 2.5).attr("fill", "#fff")
+
+          // Hover events
+          pinGroup
+            .on("mouseenter", () => {
+              setHoveredPin(pin)
+              pinGroup.select("path").attr("transform", "scale(1.3)").attr("fill", "#fbbf24")
+            })
+            .on("mouseleave", () => {
+              setHoveredPin(null)
+              pinGroup.select("path").attr("transform", "scale(1)").attr("fill", getPinColor(pin.type))
+            })
+            .on("click", (event: MouseEvent) => {
+              event.stopPropagation()
+              onCountryClick(pin.countryId)
+            })
+        }
+      }
+    })
+
     // Lichtreflektion
     const reflectionGradient = defs
       .append("radialGradient")
@@ -563,6 +675,9 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     getStatusColor,
     handleCountryHover,
     handleCountryClickInternal,
+    locationPins,
+    getPinColor,
+    onCountryClick,
   ])
 
   return (
@@ -602,14 +717,33 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           style={{ cursor: isDragging ? "grabbing" : "grab" }}
         />
 
-        {/* Hover-Tooltip */}
-        {hoveredCountryData && (
+        {/* Hover-Tooltip for Country */}
+        {hoveredCountryData && !hoveredPin && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-md border border-primary/30 rounded-xl px-4 py-2 shadow-xl shadow-primary/10 pointer-events-none z-20">
             <div className="flex items-center gap-3">
               <span className="text-3xl drop-shadow-sm">{hoveredCountryData.flag}</span>
               <div>
                 <p className="font-semibold text-sm">{hoveredCountryData.name}</p>
                 <p className="text-xs text-muted-foreground">{hoveredCountryData.capital}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hoveredPin && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-md border border-primary/30 rounded-xl px-4 py-2 shadow-xl shadow-primary/10 pointer-events-none z-20">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: getPinColor(hoveredPin.type) + "20" }}
+              >
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPinColor(hoveredPin.type) }} />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{hoveredPin.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {countries.find((c) => c.id === hoveredPin.countryId)?.name}
+                </p>
               </div>
             </div>
           </div>
@@ -629,6 +763,15 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
             <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
             <span className="text-[10px] text-white/80">Bucket List</span>
           </div>
+          {locationPins.length > 0 && (
+            <>
+              <div className="w-px h-3 bg-white/30" />
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <span className="text-[10px] text-white/80">{locationPins.length} Orte</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

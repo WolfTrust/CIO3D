@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, forwardRef, useImperativeHandle } from "react"
+import { useState, forwardRef, useImperativeHandle, useEffect, useRef } from "react"
 import { useTravelStore, type TravelLocation } from "@/lib/travel-store"
+import { searchCities, findCityByName, type CityData } from "@/lib/city-coordinates"
 import {
   MapPin,
   Building2,
@@ -19,6 +20,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  Navigation,
 } from "lucide-react"
 
 interface LocationManagerProps {
@@ -62,12 +64,20 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
   const [editingId, setEditingId] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(true)
 
+  const [suggestions, setSuggestions] = useState<CityData[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
   // Form states
   const [newName, setNewName] = useState("")
   const [newType, setNewType] = useState<TravelLocation["type"]>("city")
   const [newDate, setNewDate] = useState("")
   const [newNotes, setNewNotes] = useState("")
   const [newRating, setNewRating] = useState(0)
+  const [newCoordinates, setNewCoordinates] = useState<[number, number] | null>(null)
+  const [showManualCoords, setShowManualCoords] = useState(false)
+  const [manualLat, setManualLat] = useState("")
+  const [manualLng, setManualLng] = useState("")
 
   // Edit states
   const [editName, setEditName] = useState("")
@@ -75,6 +85,7 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
   const [editDate, setEditDate] = useState("")
   const [editNotes, setEditNotes] = useState("")
   const [editRating, setEditRating] = useState(0)
+  const [editCoordinates, setEditCoordinates] = useState<[number, number] | null>(null)
 
   const locations = tripData[countryId]?.locations || []
 
@@ -85,23 +96,75 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
     },
   }))
 
+  useEffect(() => {
+    if (newName.length >= 2) {
+      const results = searchCities(newName, countryId)
+      setSuggestions(results)
+      setShowSuggestions(results.length > 0)
+    } else {
+      setSuggestions([])
+      setShowSuggestions(false)
+    }
+  }, [newName, countryId])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selectSuggestion = (city: CityData) => {
+    setNewName(city.name)
+    setNewCoordinates(city.coordinates)
+    setShowSuggestions(false)
+  }
+
+  const applyManualCoords = () => {
+    const lat = Number.parseFloat(manualLat)
+    const lng = Number.parseFloat(manualLng)
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      setNewCoordinates([lat, lng])
+      setShowManualCoords(false)
+    }
+  }
+
   const resetForm = () => {
     setNewName("")
     setNewType("city")
     setNewDate("")
     setNewNotes("")
     setNewRating(0)
+    setNewCoordinates(null)
     setShowAddForm(false)
+    setShowManualCoords(false)
+    setManualLat("")
+    setManualLng("")
   }
 
   const handleAdd = () => {
     if (!newName.trim()) return
+
+    // Try to find coordinates if not set
+    let coords = newCoordinates
+    if (!coords) {
+      const found = findCityByName(newName, countryId)
+      if (found) {
+        coords = found.coordinates
+      }
+    }
+
     addLocation(countryId, {
       name: newName.trim(),
       type: newType,
       date: newDate || undefined,
       notes: newNotes || undefined,
       rating: newRating || undefined,
+      coordinates: coords || undefined,
     })
     resetForm()
   }
@@ -113,6 +176,7 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
     setEditDate(location.date || "")
     setEditNotes(location.notes || "")
     setEditRating(location.rating || 0)
+    setEditCoordinates(location.coordinates || null)
   }
 
   const handleUpdate = () => {
@@ -123,6 +187,7 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
       date: editDate || undefined,
       notes: editNotes || undefined,
       rating: editRating || undefined,
+      coordinates: editCoordinates || undefined,
     })
     setEditingId(null)
   }
@@ -206,6 +271,21 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
                           ))}
                         </div>
                       </div>
+                      {/* Coordinates display for edit */}
+                      {editCoordinates && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded">
+                          <Navigation className="w-3 h-3" />
+                          <span>
+                            {editCoordinates[0].toFixed(4)}, {editCoordinates[1].toFixed(4)}
+                          </span>
+                          <button
+                            onClick={() => setEditCoordinates(null)}
+                            className="ml-auto text-destructive hover:text-destructive/80"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                       <textarea
                         value={editNotes}
                         onChange={(e) => setEditNotes(e.target.value)}
@@ -241,6 +321,9 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
                       <div className="flex items-center gap-2">
                         <h5 className="font-medium text-sm truncate">{location.name}</h5>
                         {location.favorite && <Star className="w-3 h-3 fill-primary text-primary shrink-0" />}
+                        {location.coordinates && (
+                          <MapPin className="w-3 h-3 text-green-500 shrink-0" title="Auf Karte sichtbar" />
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{getLocationLabel(location.type)}</span>
@@ -308,15 +391,31 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
           {/* Add Form */}
           {showAddForm ? (
             <div className="bg-background rounded-lg p-3 space-y-3">
-              <div className="flex gap-2">
+              <div className="relative" ref={suggestionsRef}>
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Name des Ortes (z.B. Paris, Eiffelturm)"
-                  className="flex-1 px-3 py-2 bg-secondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-secondary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   autoFocus
                 />
+                {/* Suggestions dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                    {suggestions.map((city, index) => (
+                      <button
+                        key={`${city.name}-${index}`}
+                        onClick={() => selectSuggestion(city)}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-secondary flex items-center gap-2 transition-colors"
+                      >
+                        <MapPin className="w-3 h-3 text-primary" />
+                        <span>{city.name}</span>
+                        <Navigation className="w-3 h-3 text-green-500 ml-auto" title="Hat Koordinaten" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-1">
@@ -333,6 +432,61 @@ export const LocationManager = forwardRef<LocationManagerHandle, LocationManager
                   </button>
                 ))}
               </div>
+
+              {newCoordinates ? (
+                <div className="flex items-center gap-2 text-xs bg-green-500/10 text-green-500 px-3 py-2 rounded-lg">
+                  <Navigation className="w-4 h-4" />
+                  <span>
+                    Koordinaten: {newCoordinates[0].toFixed(4)}, {newCoordinates[1].toFixed(4)}
+                  </span>
+                  <button onClick={() => setNewCoordinates(null)} className="ml-auto hover:text-green-400">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : showManualCoords ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      value={manualLat}
+                      onChange={(e) => setManualLat(e.target.value)}
+                      placeholder="Breitengrad (-90 bis 90)"
+                      className="flex-1 px-3 py-2 bg-secondary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      value={manualLng}
+                      onChange={(e) => setManualLng(e.target.value)}
+                      placeholder="Längengrad (-180 bis 180)"
+                      className="flex-1 px-3 py-2 bg-secondary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowManualCoords(false)}
+                      className="flex-1 py-1.5 text-xs bg-muted rounded-lg"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={applyManualCoords}
+                      className="flex-1 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg"
+                    >
+                      Anwenden
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowManualCoords(true)}
+                  className="w-full py-2 text-xs text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Navigation className="w-3 h-3" />
+                  Koordinaten manuell eingeben (für Stecknadel auf Karte)
+                </button>
+              )}
 
               <div className="flex gap-2">
                 <input
