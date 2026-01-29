@@ -173,23 +173,29 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         // Set Cesium Ion Access Token (optional - für bessere Tiles)
         // Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE"
 
+        // Verwende OpenStreetMap als Fallback, wenn kein Ion Token vorhanden ist
+        const imageryProvider = Cesium.createOpenStreetMapImageryProvider({
+          url: 'https://a.tile.openstreetmap.org/'
+        })
+
         const viewer = new Cesium.Viewer(cesiumContainerRef.current!, {
-        terrainProvider: Cesium.createWorldTerrain(),
-        baseLayerPicker: false,
-        vrButton: false,
-        geocoder: false,
-        homeButton: false,
-        infoBox: false,
-        sceneModePicker: false,
-        selectionIndicator: false,
-        timeline: false,
-        animation: false,
-        fullscreenButton: false,
-        navigationHelpButton: false,
-        shouldAnimate: true,
-        requestRenderMode: true,
-        maximumRenderTimeChange: Infinity,
-      })
+          terrainProvider: Cesium.createWorldTerrain(),
+          baseLayer: new Cesium.ImageryLayer(imageryProvider),
+          baseLayerPicker: false,
+          vrButton: false,
+          geocoder: false,
+          homeButton: false,
+          infoBox: false,
+          sceneModePicker: false,
+          selectionIndicator: false,
+          timeline: false,
+          animation: false,
+          fullscreenButton: false,
+          navigationHelpButton: false,
+          shouldAnimate: true,
+          requestRenderMode: false, // Deaktiviert für bessere Performance
+          maximumRenderTimeChange: Infinity,
+        })
 
           // Configure scene
           viewer.scene.globe.enableLighting = true
@@ -198,6 +204,15 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           viewer.scene.globe.showWaterEffect = true
           viewer.scene.globe.showGroundAtmosphere = true
           viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.5)
+          
+          // Verbesserte Sichtbarkeit
+          viewer.scene.globe.show = true
+          viewer.scene.skyBox.show = true
+          viewer.scene.sun.show = true
+          viewer.scene.moon.show = true
+          
+          // Stelle sicher, dass der Viewer gerendert wird
+          viewer.scene.requestRender()
           
           // Set initial camera position
           viewer.camera.setView({
@@ -218,6 +233,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           setIsInitialized(true)
       } catch (error) {
         console.error("Error initializing Cesium:", error)
+        // Zeige Fehlermeldung im UI
+        alert(`Fehler beim Laden von CesiumJS: ${error instanceof Error ? error.message : String(error)}\n\nBitte prüfen Sie die Browser-Konsole für Details.`)
       }
     }
 
