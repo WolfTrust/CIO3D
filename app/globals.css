@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "cesium/Build/Cesium/Widgets/widgets.css";
 
 @custom-variant dark (&:is(.dark *));
 

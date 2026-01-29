@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Header } from "@/components/header"
-import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map"
+import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map-cesium"
 import { CountryList } from "@/components/country-list"
 import { BucketList } from "@/components/bucket-list"
 import { Achievements } from "@/components/achievements"
