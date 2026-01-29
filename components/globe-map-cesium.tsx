@@ -207,7 +207,6 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
         const viewer = new Cesium.Viewer(cesiumContainerRef.current!, {
           terrainProvider: new Cesium.EllipsoidTerrainProvider(), // Einfacheres Terrain ohne Ion Token
-          baseLayer: imageryProvider ? new Cesium.ImageryLayer(imageryProvider) : undefined,
           baseLayerPicker: false,
           vrButton: false,
           geocoder: false,
@@ -224,13 +223,40 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           maximumRenderTimeChange: Infinity,
         })
         
-        // Stelle sicher, dass Imagery geladen wird
+        // Entferne alle Standard-Layers und füge unseren Provider hinzu
+        viewer.imageryLayers.removeAll()
+        
         if (imageryProvider) {
-          viewer.imageryLayers.removeAll()
-          viewer.imageryLayers.addImageryProvider(imageryProvider)
-          console.log("✓ Imagery Layer hinzugefügt, Anzahl Layers:", viewer.imageryLayers.length)
+          try {
+            const layer = viewer.imageryLayers.addImageryProvider(imageryProvider)
+            console.log("✓ Imagery Layer hinzugefügt:", {
+              provider: imageryProvider.constructor.name,
+              layerCount: viewer.imageryLayers.length,
+              layer: layer
+            })
+            
+            // Stelle sicher, dass der Layer sichtbar ist
+            layer.show = true
+            layer.alpha = 1.0
+            
+            // Force render
+            viewer.scene.requestRender()
+          } catch (error) {
+            console.error("Fehler beim Hinzufügen des Imagery Providers:", error)
+          }
         } else {
           console.warn("⚠ Kein Imagery Provider verfügbar - Globus wird nur blau angezeigt")
+          
+          // Versuche ArcGIS als letzten Fallback
+          try {
+            const arcgisProvider = new Cesium.ArcGisMapServerImageryProvider({
+              url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+            })
+            viewer.imageryLayers.addImageryProvider(arcgisProvider)
+            console.log("✓ ArcGIS Fallback hinzugefügt")
+          } catch (fallbackError) {
+            console.error("Auch ArcGIS Fallback fehlgeschlagen:", fallbackError)
+          }
         }
 
           // Configure scene
