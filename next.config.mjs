@@ -12,6 +12,9 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  // Explizite Host-Konfiguration
+  // hostname: 'localhost',
+  // port: 3000,
   // CesiumJS Webpack-Konfiguration (temporär deaktiviert für Stabilität)
   // webpack: (config, { isServer }) => {
   //   if (!isServer) {
