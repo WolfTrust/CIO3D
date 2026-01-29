@@ -3,12 +3,28 @@
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react"
 import { Header } from "@/components/header"
 import { Globe as GlobeIcon, Map } from "lucide-react"
-// Dynamische Imports für beide Globe-Komponenten
-const GlobeMapD3 = lazy(() => import("@/components/globe-map").then(m => ({ default: m.GlobeMap })))
-const GlobeMapCesium = lazy(() => import("@/components/globe-map-cesium").then(m => ({ default: m.GlobeMap })))
-
-// Import Types (beide Komponenten haben das gleiche Interface)
+// Import Types
 import type { GlobeMapHandle } from "@/components/globe-map"
+
+// Dynamische Imports für beide Globe-Komponenten mit Fehlerbehandlung
+const GlobeMapD3 = lazy(() => 
+  import("@/components/globe-map")
+    .then(m => ({ default: m.GlobeMap }))
+    .catch(err => {
+      console.error("Fehler beim Laden der D3.js Globe-Komponente:", err)
+      throw err
+    })
+)
+
+const GlobeMapCesium = lazy(() => 
+  import("@/components/globe-map-cesium")
+    .then(m => ({ default: m.GlobeMap }))
+    .catch(err => {
+      console.error("Fehler beim Laden der CesiumJS Globe-Komponente:", err)
+      // Fallback zur D3.js-Komponente wenn CesiumJS nicht verfügbar ist
+      return import("@/components/globe-map").then(m => ({ default: m.GlobeMap }))
+    })
+)
 import { CountryList } from "@/components/country-list"
 import { BucketList } from "@/components/bucket-list"
 import { Achievements } from "@/components/achievements"
@@ -136,7 +152,18 @@ export function HomeContent() {
             </div>
 
             {/* Dynamische Globe-Komponente */}
-            <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center bg-background"><div className="text-muted-foreground">Lade Globe...</div></div>}>
+            <Suspense 
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center bg-background">
+                  <div className="text-center">
+                    <div className="text-muted-foreground mb-2">Lade Globe...</div>
+                    <div className="text-xs text-muted-foreground">
+                      {useCesiumGlobe ? "CesiumJS wird geladen..." : "D3.js Globe wird geladen..."}
+                    </div>
+                  </div>
+                </div>
+              }
+            >
               {useCesiumGlobe ? (
                 <GlobeMapCesium
                   ref={globeRef}
