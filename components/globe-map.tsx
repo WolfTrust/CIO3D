@@ -87,7 +87,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
   const [showMembers, setShowMembers] = useState(true) // Member-Pins anzeigen (standardmäßig an)
   const [hoveredEvent, setHoveredEvent] = useState<EventPin | null>(null)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null) // Ausgewähltes Mitglied
-  const [globeStyle, setGlobeStyle] = useState<"styled" | "standard">("styled") // Globus-Darstellung: stilisierte oder Standard
+  const [globeStyle, setGlobeStyle] = useState<"styled" | "standard">("standard") // Globus-Darstellung: Standard (realistisch) oder stilisierte
   const rotationRef = useRef<[number, number, number]>(rotation) // Ref für Performance-Optimierung
   const renderRequestRef = useRef<number | null>(null) // Ref für requestAnimationFrame
 
@@ -233,11 +233,11 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         console.error("Fehler beim Laden der GeoJSON-Daten:", error)
         // Versuche alternativen CDN
         fetch("https://unpkg.com/world-atlas@2/countries-110m.json")
-          .then((res) => res.json())
-          .then((topology: Topology<{ countries: GeometryCollection }>) => {
-            const geo = topojson.feature(topology, topology.objects.countries) as unknown as GeoPermissibleObjects
-            setGeoData(geo)
-          })
+      .then((res) => res.json())
+      .then((topology: Topology<{ countries: GeometryCollection }>) => {
+        const geo = topojson.feature(topology, topology.objects.countries) as unknown as GeoPermissibleObjects
+        setGeoData(geo)
+      })
           .catch((err) => {
             console.error("Auch alternativer CDN fehlgeschlagen:", err)
           })
@@ -835,50 +835,53 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
     const defs = svg.append("defs")
 
-    // Ocean gradient - unterschiedlich für stilisierte und Standard-Darstellung
-    const oceanGradient = defs.append("radialGradient").attr("id", "ocean-gradient").attr("cx", "30%").attr("cy", "30%")
+    // Ocean gradient - Realistisches Ozeanblau wie bei einem echten Globus
+    const oceanGradient = defs.append("radialGradient").attr("id", "ocean-gradient")
+      .attr("cx", "35%").attr("cy", "30%") // Licht von oben links
     if (globeStyle === "standard") {
-      // Standard-Globus: Einfache blaue Farben
-      oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#4a90e2")
-      oceanGradient.append("stop").attr("offset", "50%").attr("stop-color", "#357abd")
-      oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#1e3a5f")
+      // Realistischer Globus: Echte Ozeanfarben
+      oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#1e90ff") // Helles Blau (Lichtreflexion)
+      oceanGradient.append("stop").attr("offset", "30%").attr("stop-color", "#0066cc") // Mittleres Blau
+      oceanGradient.append("stop").attr("offset", "60%").attr("stop-color", "#004080") // Tiefes Blau
+      oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#001f3f") // Sehr tiefes Blau (Schatten)
     } else {
       // Stilisierte Darstellung: Dunklere, dramatischere Farben
-      oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#1e4976")
-      oceanGradient.append("stop").attr("offset", "50%").attr("stop-color", "#0d3a5f")
-      oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#061829")
+    oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#1e4976")
+    oceanGradient.append("stop").attr("offset", "50%").attr("stop-color", "#0d3a5f")
+    oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#061829")
     }
 
     // Glow filter - nur bei stilisierter Darstellung
     if (globeStyle === "styled") {
-      const glowFilter = defs
-        .append("filter")
-        .attr("id", "globe-glow")
-        .attr("x", "-100%")
-        .attr("y", "-100%")
-        .attr("width", "300%")
-        .attr("height", "300%")
-      glowFilter.append("feGaussianBlur").attr("stdDeviation", "12").attr("result", "blur")
-      glowFilter.append("feComposite").attr("in", "SourceGraphic").attr("in2", "blur").attr("operator", "over")
+    const glowFilter = defs
+      .append("filter")
+      .attr("id", "globe-glow")
+      .attr("x", "-100%")
+      .attr("y", "-100%")
+      .attr("width", "300%")
+      .attr("height", "300%")
+    glowFilter.append("feGaussianBlur").attr("stdDeviation", "12").attr("result", "blur")
+    glowFilter.append("feComposite").attr("in", "SourceGraphic").attr("in2", "blur").attr("operator", "over")
     }
 
-    // Atmosphere gradient - unterschiedlich für stilisierte und Standard-Darstellung
+    // Atmosphere gradient - Realistische Atmosphäre wie bei einem echten Globus
     const atmosphereGradient = defs
       .append("radialGradient")
       .attr("id", "atmosphere-gradient")
-      .attr("cx", "50%")
-      .attr("cy", "50%")
+      .attr("cx", "35%")
+      .attr("cy", "25%") // Licht von oben links
     if (globeStyle === "standard") {
-      // Standard-Globus: Subtile Atmosphäre
-      atmosphereGradient.append("stop").attr("offset", "90%").attr("stop-color", "#87ceeb").attr("stop-opacity", "0")
-      atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#b0e0e6").attr("stop-opacity", "0.1")
-      atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#e0f2fe").attr("stop-opacity", "0.2")
+      // Realistischer Globus: Subtile, natürliche Atmosphäre
+      atmosphereGradient.append("stop").attr("offset", "85%").attr("stop-color", "#e0f2fe").attr("stop-opacity", "0")
+      atmosphereGradient.append("stop").attr("offset", "92%").attr("stop-color", "#bae6fd").attr("stop-opacity", "0.08")
+      atmosphereGradient.append("stop").attr("offset", "96%").attr("stop-color", "#93c5fd").attr("stop-opacity", "0.15")
+      atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#60a5fa").attr("stop-opacity", "0.25")
     } else {
       // Stilisierte Darstellung: Dramatischere Atmosphäre
-      atmosphereGradient.append("stop").attr("offset", "80%").attr("stop-color", "#3b82f6").attr("stop-opacity", "0")
-      atmosphereGradient.append("stop").attr("offset", "88%").attr("stop-color", "#60a5fa").attr("stop-opacity", "0.15")
-      atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#93c5fd").attr("stop-opacity", "0.25")
-      atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#bfdbfe").attr("stop-opacity", "0.4")
+    atmosphereGradient.append("stop").attr("offset", "80%").attr("stop-color", "#3b82f6").attr("stop-opacity", "0")
+    atmosphereGradient.append("stop").attr("offset", "88%").attr("stop-color", "#60a5fa").attr("stop-opacity", "0.15")
+    atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#93c5fd").attr("stop-opacity", "0.25")
+    atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#bfdbfe").attr("stop-opacity", "0.4")
     }
 
     const pinShadow = defs
@@ -958,11 +961,11 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           } else {
             // Fallback zu orthographisch
             projection = d3
-              .geoOrthographic()
+      .geoOrthographic()
               .scale(baseScale * Math.min(zoomLevel, 2.4))
-              .translate([width / 2, height / 2])
+      .translate([width / 2, height / 2])
               .rotate(currentRotation)
-              .clipAngle(90)
+      .clipAngle(90)
           }
         }
       } else {
@@ -1004,7 +1007,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     const globeOpacity = 1 - transitionFactor
     const flatOpacity = transitionFactor
     
-    // Globus-Kreis (wird bei Zoom ausgeblendet)
+    // Globus-Kreis (wird bei Zoom ausgeblendet) - Realistischer 3D-Effekt
     const globeCircle = svg
       .append("circle")
       .attr("cx", width / 2)
@@ -1015,6 +1018,59 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       .attr("opacity", globeOpacity)
       .style("pointer-events", useFlatProjection ? "none" : "auto")
     
+    // Realistischer Schatten für 3D-Effekt (nur bei Standard-Globus)
+    if (globeStyle === "standard" && !useFlatProjection) {
+      const shadowFilter = defs
+        .append("filter")
+        .attr("id", "globe-shadow-filter")
+        .attr("x", "-50%")
+        .attr("y", "-50%")
+        .attr("width", "200%")
+        .attr("height", "200%")
+      
+      shadowFilter
+        .append("feGaussianBlur")
+        .attr("in", "SourceAlpha")
+        .attr("stdDeviation", "8")
+        .attr("result", "blur")
+      
+      shadowFilter
+        .append("feOffset")
+        .attr("in", "blur")
+        .attr("dx", "15")
+        .attr("dy", "15")
+        .attr("result", "offsetBlur")
+      
+      shadowFilter
+        .append("feFlood")
+        .attr("flood-color", "#000000")
+        .attr("flood-opacity", "0.3")
+        .attr("result", "color")
+      
+      shadowFilter
+        .append("feComposite")
+        .attr("in", "color")
+        .attr("in2", "offsetBlur")
+        .attr("operator", "in")
+        .attr("result", "shadow")
+      
+      const feMerge = shadowFilter.append("feMerge")
+      feMerge.append("feMergeNode").attr("in", "shadow")
+      feMerge.append("feMergeNode").attr("in", "SourceGraphic")
+      
+      // Schatten-Kreis
+      svg
+        .append("ellipse")
+        .attr("cx", width / 2 + 15)
+        .attr("cy", height / 2 + 15)
+        .attr("rx", size / 2.05 * 0.9)
+        .attr("ry", size / 2.05 * 0.3)
+        .attr("fill", "#000000")
+        .attr("opacity", 0.2)
+        .attr("filter", "url(#globe-shadow-filter)")
+        .lower()
+    }
+    
     // Flacher Hintergrund (wird bei Zoom eingeblendet)
     const flatBackground = svg
       .append("rect")
@@ -1024,17 +1080,18 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       .attr("opacity", flatOpacity)
     flatBackground.lower()
 
-    // Graticule mit sanfter Transition - nur bei Standard-Globus oder stilisierter Darstellung
+    // Graticule (Längen- und Breitengrade) - Realistisch wie bei einem echten Globus
     if (globeStyle === "standard" || globeOpacity > 0.3) {
-      const graticule = d3.geoGraticule()
-      svg
-        .append("path")
-        .datum(graticule())
-        .attr("d", path as unknown as string)
-        .attr("fill", "none")
-        .attr("stroke", globeStyle === "standard" ? "#3b82f6" : "#1e3a5f")
-        .attr("stroke-width", globeStyle === "standard" ? 0.3 : 0.4 * (1 - transitionFactor))
-        .attr("stroke-opacity", globeStyle === "standard" ? 0.3 : 0.5 * globeOpacity)
+    const graticule = d3.geoGraticule()
+    svg
+      .append("path")
+      .datum(graticule())
+      .attr("d", path as unknown as string)
+      .attr("fill", "none")
+        .attr("stroke", globeStyle === "standard" ? "#60a5fa" : "#1e3a5f")
+        .attr("stroke-width", globeStyle === "standard" ? 0.25 : 0.4 * (1 - transitionFactor))
+        .attr("stroke-opacity", globeStyle === "standard" ? 0.25 : 0.5 * globeOpacity)
+        .attr("stroke-dasharray", globeStyle === "standard" ? "1,3" : "none") // Subtile gestrichelte Linien
     }
 
     // Länder - alle werden angezeigt, aber bei flacher Ansicht werden nur relevante hervorgehoben
@@ -1051,11 +1108,13 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         const alpha3 = numericToAlpha3[d.id]
         const status = alpha3 ? getCountryStatus(alpha3) : null
         if (globeStyle === "standard") {
-          // Standard-Globus: Einfache Farben
-          if (status === "visited") return "#4ade80" // helleres Grün
-          if (status === "lived") return "#fbbf24" // helleres Gelb
-          if (status === "bucket-list") return "#60a5fa" // helleres Blau
-          return "#64748b" // neutrales Grau
+          // Realistischer Globus: Natürliche Landfarben wie bei einem echten Globus
+          if (status === "visited") return "#4ade80" // Frisches Grün (besuchte Länder)
+          if (status === "lived") return "#f59e0b" // Warmes Orange/Gelb (gelebt)
+          if (status === "bucket-list") return "#3b82f6" // Helles Blau (Bucket List)
+          // Realistische Landfarben basierend auf geografischen Regionen
+          // Grün für bewaldete Gebiete, Beige für Wüsten, Braun für Gebirge
+          return "#84cc16" // Natürliches Grün für unbekannte Länder
         }
         return getStatusColor(status)
       })
@@ -1066,6 +1125,10 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         if (useFlatProjection && countryId === zoomedCountry) {
           return "#fbbf24"
         }
+        // Realistische Länder-Grenzen wie bei einem echten Globus
+        if (globeStyle === "standard") {
+          return "#475569" // Subtiles Grau für Grenzen
+        }
         return "#1f2937"
       })
       .attr("stroke-width", (d: { id: string }) => {
@@ -1073,6 +1136,10 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         const countryId = alpha3 ? alpha3ToCountryId[alpha3] : null
         if (useFlatProjection && countryId === zoomedCountry) {
           return 2
+        }
+        // Dünnere, realistischere Grenzen für echten Globus
+        if (globeStyle === "standard") {
+          return 0.3
         }
         return 0.5
       })
@@ -1502,15 +1569,23 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     feMerge.append("feMergeNode").attr("in", "coloredBlur")
     feMerge.append("feMergeNode").attr("in", "SourceGraphic")
 
-    // Lichtreflektion
+    // Realistische Lichtreflektion wie bei einem echten Globus (Licht von oben links)
     const reflectionGradient = defs
       .append("radialGradient")
       .attr("id", "reflection-gradient")
       .attr("cx", "35%")
-      .attr("cy", "25%")
+      .attr("cy", "25%") // Lichtquelle oben links
+    if (globeStyle === "standard") {
+      // Realistische Reflexion für echten Globus
+      reflectionGradient.append("stop").attr("offset", "0%").attr("stop-color", "#ffffff").attr("stop-opacity", "0.18")
+      reflectionGradient.append("stop").attr("offset", "25%").attr("stop-color", "#ffffff").attr("stop-opacity", "0.10")
+      reflectionGradient.append("stop").attr("offset", "50%").attr("stop-color", "#ffffff").attr("stop-opacity", "0.05")
+      reflectionGradient.append("stop").attr("offset", "100%").attr("stop-color", "#ffffff").attr("stop-opacity", "0")
+    } else {
     reflectionGradient.append("stop").attr("offset", "0%").attr("stop-color", "#ffffff").attr("stop-opacity", "0.12")
     reflectionGradient.append("stop").attr("offset", "40%").attr("stop-color", "#ffffff").attr("stop-opacity", "0.04")
     reflectionGradient.append("stop").attr("offset", "100%").attr("stop-color", "#ffffff").attr("stop-opacity", "0")
+    }
 
     // Lichtreflektion mit sanfter Transition
     svg
@@ -1708,25 +1783,25 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
               {hoveredPin.countryId ? (
                 // Normale Location Pin
                 <>
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: getPinColor(hoveredPin.type) + "20" }}
-                  >
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPinColor(hoveredPin.type) }} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{hoveredPin.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {countries.find((c) => c.id === hoveredPin.countryId)?.name}
-                    </p>
-                  </div>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: getPinColor(hoveredPin.type) + "20" }}
+              >
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPinColor(hoveredPin.type) }} />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{hoveredPin.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {countries.find((c) => c.id === hoveredPin.countryId)?.name}
+                </p>
+              </div>
                 </>
               ) : (
                 // Mitglieder-Punkt (leuchtend)
                 <>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20">
                     <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-                  </div>
+            </div>
                   <div>
                     <p className="font-semibold text-sm">{hoveredPin.name}</p>
                     <p className="text-xs text-muted-foreground">Mitglied</p>
