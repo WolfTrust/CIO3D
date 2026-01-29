@@ -2,8 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Header } from "@/components/header"
-// CesiumJS für Google Earth-ähnliche 3D-Globus-Darstellung
-import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map-cesium"
+// Temporär zurück zur D3.js-Komponente für Stabilität
+// CesiumJS kann später aktiviert werden, wenn alle Dependencies installiert sind
+import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map"
 import { CountryList } from "@/components/country-list"
 import { BucketList } from "@/components/bucket-list"
 import { Achievements } from "@/components/achievements"
