@@ -174,12 +174,21 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         // Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE"
 
         // Verwende OpenStreetMap als Fallback, wenn kein Ion Token vorhanden ist
-        const imageryProvider = Cesium.createOpenStreetMapImageryProvider({
-          url: 'https://a.tile.openstreetmap.org/'
-        })
+        // Versuche zuerst OpenStreetMap, falls das fehlschlägt, verwende NaturalEarthII
+        let imageryProvider
+        try {
+          imageryProvider = Cesium.createOpenStreetMapImageryProvider({
+            url: 'https://a.tile.openstreetmap.org/'
+          })
+        } catch (error) {
+          console.warn("OpenStreetMap nicht verfügbar, verwende NaturalEarthII:", error)
+          imageryProvider = new Cesium.TileMapServiceImageryProvider({
+            url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+          })
+        }
 
         const viewer = new Cesium.Viewer(cesiumContainerRef.current!, {
-          terrainProvider: Cesium.createWorldTerrain(),
+          terrainProvider: new Cesium.EllipsoidTerrainProvider(), // Einfacheres Terrain ohne Ion Token
           baseLayer: new Cesium.ImageryLayer(imageryProvider),
           baseLayerPicker: false,
           vrButton: false,
@@ -213,6 +222,13 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           
           // Stelle sicher, dass der Viewer gerendert wird
           viewer.scene.requestRender()
+          
+          // Debug: Log Viewer-Status
+          console.log("CesiumJS Viewer initialisiert:", {
+            container: cesiumContainerRef.current?.clientWidth + "x" + cesiumContainerRef.current?.clientHeight,
+            imageryLayers: viewer.imageryLayers.length,
+            globeVisible: viewer.scene.globe.show
+          })
           
           // Set initial camera position
           viewer.camera.setView({
