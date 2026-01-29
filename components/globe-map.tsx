@@ -896,7 +896,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       .attr("flood-color", "#000")
       .attr("flood-opacity", "0.5")
 
-    const currentRotation = targetRotation || rotation
+    // Verwende rotationRef für bessere Performance beim Drehen
+    const currentRotation = targetRotation || rotationRef.current
     
     // Google Earth-ähnliches Verhalten: Bei Zoom-Level > 2.5 wechseln wir zur flachen Ansicht
     // Zwischen 1 und 2.5: Globus wird größer (orthographisch)
@@ -1594,7 +1595,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
               .geoOrthographic()
               .scale(baseScale * Math.min(zoomLevel, 2.4))
               .translate([width / 2, height / 2])
-              .rotate(rotation)
+              .rotate(rotationRef.current)
               .clipAngle(90)
             
             // Finde nächstes Land basierend auf Rotation oder Mausposition
