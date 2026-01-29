@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Header } from "@/components/header"
-import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map-cesium"
+// Fallback zur alten D3.js-Komponente, falls CesiumJS Probleme macht
+import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map"
 import { CountryList } from "@/components/country-list"
 import { BucketList } from "@/components/bucket-list"
 import { Achievements } from "@/components/achievements"
