@@ -173,23 +173,43 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         // Set Cesium Ion Access Token (optional - für bessere Tiles)
         // Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE"
 
-        // Verwende OpenStreetMap als Fallback, wenn kein Ion Token vorhanden ist
-        // Versuche zuerst OpenStreetMap, falls das fehlschlägt, verwende NaturalEarthII
+        // Verwende verschiedene Imagery-Provider als Fallback
+        // Versuche zuerst OpenStreetMap, dann NaturalEarthII (lokal), dann Bing Maps
         let imageryProvider
         try {
+          // Versuche OpenStreetMap
           imageryProvider = Cesium.createOpenStreetMapImageryProvider({
             url: 'https://a.tile.openstreetmap.org/'
           })
+          console.log("✓ OpenStreetMap Imagery Provider geladen")
         } catch (error) {
-          console.warn("OpenStreetMap nicht verfügbar, verwende NaturalEarthII:", error)
-          imageryProvider = new Cesium.TileMapServiceImageryProvider({
-            url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
-          })
+          console.warn("OpenStreetMap nicht verfügbar, versuche NaturalEarthII:", error)
+          try {
+            // Fallback: NaturalEarthII (lokal in public/cesium)
+            imageryProvider = new Cesium.TileMapServiceImageryProvider({
+              url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+            })
+            console.log("✓ NaturalEarthII Imagery Provider geladen")
+          } catch (error2) {
+            console.warn("NaturalEarthII nicht verfügbar, verwende Bing Maps:", error2)
+            // Letzter Fallback: Bing Maps (benötigt API Key, aber funktioniert manchmal ohne)
+            try {
+              imageryProvider = new Cesium.BingMapsImageryProvider({
+                url: 'https://dev.virtualearth.net',
+                key: '', // Leer lassen, funktioniert manchmal trotzdem
+                mapStyle: Cesium.BingMapsStyle.AERIAL
+              })
+            } catch (error3) {
+              console.error("Alle Imagery-Provider fehlgeschlagen, verwende Standard:", error3)
+              // Verwende Standard-Provider (kann Ion Token benötigen)
+              imageryProvider = undefined // Viewer verwendet dann Standard
+            }
+          }
         }
 
         const viewer = new Cesium.Viewer(cesiumContainerRef.current!, {
           terrainProvider: new Cesium.EllipsoidTerrainProvider(), // Einfacheres Terrain ohne Ion Token
-          baseLayer: new Cesium.ImageryLayer(imageryProvider),
+          baseLayer: imageryProvider ? new Cesium.ImageryLayer(imageryProvider) : undefined,
           baseLayerPicker: false,
           vrButton: false,
           geocoder: false,
@@ -205,6 +225,15 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           requestRenderMode: false, // Deaktiviert für bessere Performance
           maximumRenderTimeChange: Infinity,
         })
+        
+        // Stelle sicher, dass Imagery geladen wird
+        if (imageryProvider) {
+          viewer.imageryLayers.removeAll()
+          viewer.imageryLayers.addImageryProvider(imageryProvider)
+          console.log("✓ Imagery Layer hinzugefügt, Anzahl Layers:", viewer.imageryLayers.length)
+        } else {
+          console.warn("⚠ Kein Imagery Provider verfügbar - Globus wird nur blau angezeigt")
+        }
 
           // Configure scene
           viewer.scene.globe.enableLighting = true
