@@ -6,7 +6,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "copy-cesium": "./copy-cesium-assets.sh",
+    "postinstall": "./copy-cesium-assets.sh || true"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
