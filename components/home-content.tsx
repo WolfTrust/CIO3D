@@ -1,10 +1,14 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react"
 import { Header } from "@/components/header"
-// Temporär zurück zur D3.js-Komponente für Stabilität
-// CesiumJS kann später aktiviert werden, wenn alle Dependencies installiert sind
-import { GlobeMap, type GlobeMapHandle } from "@/components/globe-map"
+import { Globe as GlobeIcon, Map } from "lucide-react"
+// Dynamische Imports für beide Globe-Komponenten
+const GlobeMapD3 = lazy(() => import("@/components/globe-map").then(m => ({ default: m.GlobeMap })))
+const GlobeMapCesium = lazy(() => import("@/components/globe-map-cesium").then(m => ({ default: m.GlobeMap })))
+
+// Import Types (beide Komponenten haben das gleiche Interface)
+import type { GlobeMapHandle } from "@/components/globe-map"
 import { CountryList } from "@/components/country-list"
 import { BucketList } from "@/components/bucket-list"
 import { Achievements } from "@/components/achievements"
@@ -34,6 +38,7 @@ export function HomeContent() {
   const [showWelcome, setShowWelcome] = useState(true)
   const [isYearInReviewOpen, setIsYearInReviewOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [useCesiumGlobe, setUseCesiumGlobe] = useState(false) // Toggle für CesiumJS vs D3.js
   const globeRef = useRef<GlobeMapHandle>(null)
 
   useEffect(() => {
@@ -109,7 +114,46 @@ export function HomeContent() {
       <div className="flex-1 overflow-hidden relative">
         {activeTab === "map" && (
           <>
-            <GlobeMap ref={globeRef} onCountryClick={handleCountryClick} selectedCountry={selectedCountry} onEventClick={handleEventClick} />
+            {/* Toggle-Button für Globe-Ansicht */}
+            <div className="absolute top-3 right-3 z-30">
+              <button
+                onClick={() => setUseCesiumGlobe(!useCesiumGlobe)}
+                className="px-4 py-2 rounded-lg backdrop-blur-md border bg-card/95 text-foreground border-border hover:bg-accent transition-colors shadow-lg flex items-center gap-2"
+                title={useCesiumGlobe ? "Zu D3.js Globe wechseln" : "Zu CesiumJS Globe wechseln"}
+              >
+                {useCesiumGlobe ? (
+                  <>
+                    <Map className="w-4 h-4" />
+                    <span className="text-sm font-medium">D3.js Globe</span>
+                  </>
+                ) : (
+                  <>
+                    <GlobeIcon className="w-4 h-4" />
+                    <span className="text-sm font-medium">CesiumJS Globe</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Dynamische Globe-Komponente */}
+            <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center bg-background"><div className="text-muted-foreground">Lade Globe...</div></div>}>
+              {useCesiumGlobe ? (
+                <GlobeMapCesium
+                  ref={globeRef}
+                  onCountryClick={handleCountryClick}
+                  selectedCountry={selectedCountry}
+                  onEventClick={handleEventClick}
+                />
+              ) : (
+                <GlobeMapD3
+                  ref={globeRef}
+                  onCountryClick={handleCountryClick}
+                  selectedCountry={selectedCountry}
+                  onEventClick={handleEventClick}
+                />
+              )}
+            </Suspense>
+
             {showWelcome && (
               <WelcomeOverlay onStartExploring={handleStartExploring} onCountryClick={handleWelcomeCountryClick} />
             )}
