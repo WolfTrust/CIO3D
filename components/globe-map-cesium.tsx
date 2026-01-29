@@ -173,34 +173,37 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         // Set Cesium Ion Access Token (optional - für bessere Tiles)
         // Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE"
 
-        // Verwende NaturalEarthII als primären Provider (lokal verfügbar, keine CORS-Probleme)
-        // Falls das nicht funktioniert, versuche OpenStreetMap
-        let imageryProvider
+        // Verwende ArcGIS als primären Provider (zuverlässig, kostenlos, keine API Key)
+        // Falls das nicht funktioniert, versuche NaturalEarthII (lokal) oder OpenStreetMap
+        let imageryProvider = null
+        
+        // Versuche 1: ArcGIS World Imagery (zuverlässig, kostenlos, keine API Key)
         try {
-          // Primär: NaturalEarthII (lokal in public/cesium, keine Netzwerk-Anfragen)
-          imageryProvider = new Cesium.TileMapServiceImageryProvider({
-            url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+          imageryProvider = new Cesium.ArcGisMapServerImageryProvider({
+            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
           })
-          console.log("✓ NaturalEarthII Imagery Provider geladen (lokal)")
+          console.log("✓ ArcGIS World Imagery Provider erstellt")
         } catch (error) {
-          console.warn("NaturalEarthII nicht verfügbar, versuche OpenStreetMap:", error)
+          console.warn("ArcGIS fehlgeschlagen, versuche NaturalEarthII:", error)
+          
+          // Versuche 2: NaturalEarthII (lokal in public/cesium)
           try {
-            // Fallback: OpenStreetMap
-            imageryProvider = Cesium.createOpenStreetMapImageryProvider({
-              url: 'https://a.tile.openstreetmap.org/'
+            imageryProvider = new Cesium.TileMapServiceImageryProvider({
+              url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
             })
-            console.log("✓ OpenStreetMap Imagery Provider geladen")
+            console.log("✓ NaturalEarthII Imagery Provider erstellt (lokal)")
           } catch (error2) {
-            console.warn("OpenStreetMap nicht verfügbar, verwende ArcGIS:", error2)
-            // Letzter Fallback: ArcGIS World Imagery (kostenlos, keine API Key benötigt)
+            console.warn("NaturalEarthII fehlgeschlagen, versuche OpenStreetMap:", error2)
+            
+            // Versuche 3: OpenStreetMap
             try {
-              imageryProvider = new Cesium.ArcGisMapServerImageryProvider({
-                url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+              imageryProvider = Cesium.createOpenStreetMapImageryProvider({
+                url: 'https://a.tile.openstreetmap.org/'
               })
-              console.log("✓ ArcGIS World Imagery Provider geladen")
+              console.log("✓ OpenStreetMap Imagery Provider erstellt")
             } catch (error3) {
               console.error("Alle Imagery-Provider fehlgeschlagen:", error3)
-              imageryProvider = undefined
+              imageryProvider = null
             }
           }
         }
