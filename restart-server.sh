@@ -24,9 +24,18 @@ echo "✓ Fertig"
 echo ""
 
 # Prüfe Dependencies
-if [ ! -d "node_modules" ]; then
-  echo "⚠️  node_modules nicht gefunden. Installiere Dependencies..."
-  pnpm install
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/next" ]; then
+  echo "⚠️  Dependencies nicht vollständig installiert. Installiere Dependencies..."
+  CI=true pnpm install
+  echo ""
+  
+  # Prüfe ob Next.js jetzt verfügbar ist
+  if [ ! -f "node_modules/.bin/next" ]; then
+    echo "❌ Fehler: Next.js konnte nicht installiert werden!"
+    echo "Bitte führen Sie manuell aus: pnpm install"
+    exit 1
+  fi
+  echo "✓ Dependencies installiert"
   echo ""
 fi
 
