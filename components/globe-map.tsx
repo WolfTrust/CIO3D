@@ -603,6 +603,17 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     }
   }, [])
 
+  // Performance-optimierte Rotation mit requestAnimationFrame - MUSS vor useEffect-Hooks definiert werden
+  const updateRotation = useCallback((newRotation: [number, number, number]) => {
+    rotationRef.current = newRotation
+    if (renderRequestRef.current === null) {
+      renderRequestRef.current = requestAnimationFrame(() => {
+        setRotation(rotationRef.current)
+        renderRequestRef.current = null
+      })
+    }
+  }, [])
+
   useEffect(() => {
     if (!isDragging && velocityRef.current.x === 0 && velocityRef.current.y === 0) {
       const autoRotate = () => {
@@ -677,17 +688,6 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     },
     [],
   )
-
-  // Performance-optimierte Rotation mit requestAnimationFrame
-  const updateRotation = useCallback((newRotation: [number, number, number]) => {
-    rotationRef.current = newRotation
-    if (renderRequestRef.current === null) {
-      renderRequestRef.current = requestAnimationFrame(() => {
-        setRotation(rotationRef.current)
-        renderRequestRef.current = null
-      })
-    }
-  }, [])
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
