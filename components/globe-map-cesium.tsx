@@ -173,43 +173,9 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         // Set Cesium Ion Access Token (optional - für bessere Tiles)
         // Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE"
 
-        // Verwende ArcGIS als primären Provider (zuverlässig, kostenlos, keine API Key)
-        // Falls das nicht funktioniert, versuche NaturalEarthII (lokal) oder OpenStreetMap
-        let imageryProvider = null
-        
-        // Versuche 1: ArcGIS World Imagery (zuverlässig, kostenlos, keine API Key)
-        try {
-          imageryProvider = new Cesium.ArcGisMapServerImageryProvider({
-            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
-          })
-          console.log("✓ ArcGIS World Imagery Provider erstellt")
-        } catch (error) {
-          console.warn("ArcGIS fehlgeschlagen, versuche NaturalEarthII:", error)
-          
-          // Versuche 2: NaturalEarthII (lokal in public/cesium)
-          try {
-            imageryProvider = new Cesium.TileMapServiceImageryProvider({
-              url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
-            })
-            console.log("✓ NaturalEarthII Imagery Provider erstellt (lokal)")
-          } catch (error2) {
-            console.warn("NaturalEarthII fehlgeschlagen, versuche OpenStreetMap:", error2)
-            
-            // Versuche 3: OpenStreetMap
-            try {
-              imageryProvider = Cesium.createOpenStreetMapImageryProvider({
-                url: 'https://a.tile.openstreetmap.org/'
-              })
-              console.log("✓ OpenStreetMap Imagery Provider erstellt")
-            } catch (error3) {
-              console.error("Alle Imagery-Provider fehlgeschlagen:", error3)
-              imageryProvider = null
-            }
-          }
-        }
-
+        // Erstelle Viewer ohne baseLayer (verwende Standard)
         const viewer = new Cesium.Viewer(cesiumContainerRef.current!, {
-          terrainProvider: new Cesium.EllipsoidTerrainProvider(), // Einfacheres Terrain ohne Ion Token
+          terrainProvider: new Cesium.EllipsoidTerrainProvider(),
           baseLayerPicker: false,
           vrButton: false,
           geocoder: false,
@@ -222,45 +188,116 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           fullscreenButton: false,
           navigationHelpButton: false,
           shouldAnimate: true,
-          requestRenderMode: false, // Deaktiviert für bessere Performance
+          requestRenderMode: false,
           maximumRenderTimeChange: Infinity,
         })
         
-        // Entferne alle Standard-Layers und füge unseren Provider hinzu
+        // Entferne alle Standard-Layers
         viewer.imageryLayers.removeAll()
         
-        if (imageryProvider) {
+        // Füge Imagery-Provider asynchron hinzu (warten auf Ready)
+        const addImageryProvider = async () => {
+          let imageryProvider = null
+          
+          // Versuche 1: NaturalEarthII (lokal, keine Netzwerk-Anfragen, zuverlässig)
           try {
-            const layer = viewer.imageryLayers.addImageryProvider(imageryProvider)
-            console.log("✓ Imagery Layer hinzugefügt:", {
-              provider: imageryProvider.constructor.name,
-              layerCount: viewer.imageryLayers.length,
-              layer: layer
+            imageryProvider = new Cesium.TileMapServiceImageryProvider({
+              url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
             })
             
-            // Stelle sicher, dass der Layer sichtbar ist
+            // Warte auf Ready-Event
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reject(new Error("Timeout beim Laden von NaturalEarthII"))
+              }, 5000)
+              
+              imageryProvider.readyPromise.then(() => {
+                clearTimeout(timeout)
+                console.log("✓ NaturalEarthII Imagery Provider ready")
+                resolve(undefined)
+              }).catch((error) => {
+                clearTimeout(timeout)
+                reject(error)
+              })
+            })
+            
+            const layer = viewer.imageryLayers.addImageryProvider(imageryProvider)
             layer.show = true
             layer.alpha = 1.0
-            
-            // Force render
+            console.log("✓ NaturalEarthII Layer hinzugefügt")
             viewer.scene.requestRender()
+            return
           } catch (error) {
-            console.error("Fehler beim Hinzufügen des Imagery Providers:", error)
+            console.warn("NaturalEarthII fehlgeschlagen:", error)
           }
-        } else {
-          console.warn("⚠ Kein Imagery Provider verfügbar - Globus wird nur blau angezeigt")
           
-          // Versuche ArcGIS als letzten Fallback
+          // Versuche 2: ArcGIS World Imagery
           try {
-            const arcgisProvider = new Cesium.ArcGisMapServerImageryProvider({
+            imageryProvider = new Cesium.ArcGisMapServerImageryProvider({
               url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
             })
-            viewer.imageryLayers.addImageryProvider(arcgisProvider)
-            console.log("✓ ArcGIS Fallback hinzugefügt")
-          } catch (fallbackError) {
-            console.error("Auch ArcGIS Fallback fehlgeschlagen:", fallbackError)
+            
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reject(new Error("Timeout beim Laden von ArcGIS"))
+              }, 10000)
+              
+              imageryProvider.readyPromise.then(() => {
+                clearTimeout(timeout)
+                console.log("✓ ArcGIS Imagery Provider ready")
+                resolve(undefined)
+              }).catch((error) => {
+                clearTimeout(timeout)
+                reject(error)
+              })
+            })
+            
+            const layer = viewer.imageryLayers.addImageryProvider(imageryProvider)
+            layer.show = true
+            layer.alpha = 1.0
+            console.log("✓ ArcGIS Layer hinzugefügt")
+            viewer.scene.requestRender()
+            return
+          } catch (error) {
+            console.warn("ArcGIS fehlgeschlagen:", error)
+          }
+          
+          // Versuche 3: OpenStreetMap
+          try {
+            imageryProvider = Cesium.createOpenStreetMapImageryProvider({
+              url: 'https://a.tile.openstreetmap.org/'
+            })
+            
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reject(new Error("Timeout beim Laden von OpenStreetMap"))
+              }, 10000)
+              
+              imageryProvider.readyPromise.then(() => {
+                clearTimeout(timeout)
+                console.log("✓ OpenStreetMap Imagery Provider ready")
+                resolve(undefined)
+              }).catch((error) => {
+                clearTimeout(timeout)
+                reject(error)
+              })
+            })
+            
+            const layer = viewer.imageryLayers.addImageryProvider(imageryProvider)
+            layer.show = true
+            layer.alpha = 1.0
+            console.log("✓ OpenStreetMap Layer hinzugefügt")
+            viewer.scene.requestRender()
+          } catch (error) {
+            console.error("Alle Imagery-Provider fehlgeschlagen:", error)
+            console.warn("⚠ Globus wird nur blau angezeigt - keine Imagery verfügbar")
           }
         }
+        
+        // Starte asynchrones Laden
+        addImageryProvider().catch((error) => {
+          console.error("Kritischer Fehler beim Laden der Imagery:", error)
+        })
 
           // Configure scene
           viewer.scene.globe.enableLighting = true
