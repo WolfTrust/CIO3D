@@ -87,6 +87,9 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
   const [showMembers, setShowMembers] = useState(true) // Member-Pins anzeigen (standardmäßig an)
   const [hoveredEvent, setHoveredEvent] = useState<EventPin | null>(null)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null) // Ausgewähltes Mitglied
+  const [globeStyle, setGlobeStyle] = useState<"styled" | "standard">("styled") // Globus-Darstellung: stilisierte oder Standard
+  const rotationRef = useRef<[number, number, number]>(rotation) // Ref für Performance-Optimierung
+  const renderRequestRef = useRef<number | null>(null) // Ref für requestAnimationFrame
 
   const locationPins = useMemo((): LocationPin[] => {
     const pins: LocationPin[] = []
@@ -603,7 +606,12 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
   useEffect(() => {
     if (!isDragging && velocityRef.current.x === 0 && velocityRef.current.y === 0) {
       const autoRotate = () => {
-        setRotation((prev) => [(prev[0] + 0.15) % 360, prev[1], prev[2]])
+        const newRotation: [number, number, number] = [
+          (rotationRef.current[0] + 0.15) % 360,
+          rotationRef.current[1],
+          rotationRef.current[2],
+        ]
+        updateRotation(newRotation)
         autoRotateRef.current = requestAnimationFrame(autoRotate)
       }
 
@@ -616,7 +624,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         if (autoRotateRef.current) cancelAnimationFrame(autoRotateRef.current)
       }
     }
-  }, [isDragging])
+  }, [isDragging, updateRotation])
 
   useEffect(() => {
     if (!isDragging && (Math.abs(velocityRef.current.x) > 0.1 || Math.abs(velocityRef.current.y) > 0.1)) {
@@ -624,11 +632,12 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         velocityRef.current.x *= 0.95
         velocityRef.current.y *= 0.95
 
-        setRotation((prev) => [
-          prev[0] + velocityRef.current.x,
-          Math.max(-90, Math.min(90, prev[1] - velocityRef.current.y)),
+        const newRotation: [number, number, number] = [
+          rotationRef.current[0] + velocityRef.current.x,
+          Math.max(-90, Math.min(90, rotationRef.current[1] - velocityRef.current.y)),
           0,
-        ])
+        ]
+        updateRotation(newRotation)
 
         if (Math.abs(velocityRef.current.x) > 0.1 || Math.abs(velocityRef.current.y) > 0.1) {
           animationRef.current = requestAnimationFrame(animate)
@@ -642,7 +651,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         if (animationRef.current) cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isDragging])
+  }, [isDragging, updateRotation])
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -662,12 +671,23 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       velocityRef.current = { x: 0, y: 0 }
 
       const point = "touches" in e ? e.touches[0] : e
-      dragStart.current = { x: point.clientX, y: point.clientY, rotation: [...rotation] as [number, number, number] }
+      dragStart.current = { x: point.clientX, y: point.clientY, rotation: [...rotationRef.current] as [number, number, number] }
       lastPosRef.current = { x: point.clientX, y: point.clientY, time: Date.now() }
       setIsDragging(true)
     },
-    [rotation],
+    [],
   )
+
+  // Performance-optimierte Rotation mit requestAnimationFrame
+  const updateRotation = useCallback((newRotation: [number, number, number]) => {
+    rotationRef.current = newRotation
+    if (renderRequestRef.current === null) {
+      renderRequestRef.current = requestAnimationFrame(() => {
+        setRotation(rotationRef.current)
+        renderRequestRef.current = null
+      })
+    }
+  }, [])
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -691,9 +711,9 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         Math.max(-90, Math.min(90, dragStart.current.rotation[1] - dy * sensitivity)),
         0,
       ]
-      setRotation(newRotation)
+      updateRotation(newRotation)
     },
-    [isDragging],
+    [isDragging, updateRotation],
   )
 
   const handleMouseUp = useCallback(() => {
@@ -794,6 +814,11 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     return countries.find((c) => c.id === hoveredCountry)
   }, [hoveredCountry])
 
+  // Update rotationRef when rotation changes
+  useEffect(() => {
+    rotationRef.current = rotation
+  }, [rotation])
+
   useEffect(() => {
     if (!geoData || !svgRef.current || !containerRef.current) return
 
@@ -810,30 +835,51 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
     const defs = svg.append("defs")
 
+    // Ocean gradient - unterschiedlich für stilisierte und Standard-Darstellung
     const oceanGradient = defs.append("radialGradient").attr("id", "ocean-gradient").attr("cx", "30%").attr("cy", "30%")
-    oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#1e4976")
-    oceanGradient.append("stop").attr("offset", "50%").attr("stop-color", "#0d3a5f")
-    oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#061829")
+    if (globeStyle === "standard") {
+      // Standard-Globus: Einfache blaue Farben
+      oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#4a90e2")
+      oceanGradient.append("stop").attr("offset", "50%").attr("stop-color", "#357abd")
+      oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#1e3a5f")
+    } else {
+      // Stilisierte Darstellung: Dunklere, dramatischere Farben
+      oceanGradient.append("stop").attr("offset", "0%").attr("stop-color", "#1e4976")
+      oceanGradient.append("stop").attr("offset", "50%").attr("stop-color", "#0d3a5f")
+      oceanGradient.append("stop").attr("offset", "100%").attr("stop-color", "#061829")
+    }
 
-    const glowFilter = defs
-      .append("filter")
-      .attr("id", "globe-glow")
-      .attr("x", "-100%")
-      .attr("y", "-100%")
-      .attr("width", "300%")
-      .attr("height", "300%")
-    glowFilter.append("feGaussianBlur").attr("stdDeviation", "12").attr("result", "blur")
-    glowFilter.append("feComposite").attr("in", "SourceGraphic").attr("in2", "blur").attr("operator", "over")
+    // Glow filter - nur bei stilisierter Darstellung
+    if (globeStyle === "styled") {
+      const glowFilter = defs
+        .append("filter")
+        .attr("id", "globe-glow")
+        .attr("x", "-100%")
+        .attr("y", "-100%")
+        .attr("width", "300%")
+        .attr("height", "300%")
+      glowFilter.append("feGaussianBlur").attr("stdDeviation", "12").attr("result", "blur")
+      glowFilter.append("feComposite").attr("in", "SourceGraphic").attr("in2", "blur").attr("operator", "over")
+    }
 
+    // Atmosphere gradient - unterschiedlich für stilisierte und Standard-Darstellung
     const atmosphereGradient = defs
       .append("radialGradient")
       .attr("id", "atmosphere-gradient")
       .attr("cx", "50%")
       .attr("cy", "50%")
-    atmosphereGradient.append("stop").attr("offset", "80%").attr("stop-color", "#3b82f6").attr("stop-opacity", "0")
-    atmosphereGradient.append("stop").attr("offset", "88%").attr("stop-color", "#60a5fa").attr("stop-opacity", "0.15")
-    atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#93c5fd").attr("stop-opacity", "0.25")
-    atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#bfdbfe").attr("stop-opacity", "0.4")
+    if (globeStyle === "standard") {
+      // Standard-Globus: Subtile Atmosphäre
+      atmosphereGradient.append("stop").attr("offset", "90%").attr("stop-color", "#87ceeb").attr("stop-opacity", "0")
+      atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#b0e0e6").attr("stop-opacity", "0.1")
+      atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#e0f2fe").attr("stop-opacity", "0.2")
+    } else {
+      // Stilisierte Darstellung: Dramatischere Atmosphäre
+      atmosphereGradient.append("stop").attr("offset", "80%").attr("stop-color", "#3b82f6").attr("stop-opacity", "0")
+      atmosphereGradient.append("stop").attr("offset", "88%").attr("stop-color", "#60a5fa").attr("stop-opacity", "0.15")
+      atmosphereGradient.append("stop").attr("offset", "95%").attr("stop-color", "#93c5fd").attr("stop-opacity", "0.25")
+      atmosphereGradient.append("stop").attr("offset", "100%").attr("stop-color", "#bfdbfe").attr("stop-opacity", "0.4")
+    }
 
     const pinShadow = defs
       .append("filter")
@@ -964,7 +1010,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       .attr("cy", height / 2)
       .attr("r", size / 2.05)
       .attr("fill", "url(#ocean-gradient)")
-      .attr("filter", "url(#globe-glow)")
+      .attr("filter", globeStyle === "styled" ? "url(#globe-glow)" : null)
       .attr("opacity", globeOpacity)
       .style("pointer-events", useFlatProjection ? "none" : "auto")
     
@@ -977,16 +1023,18 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       .attr("opacity", flatOpacity)
     flatBackground.lower()
 
-    // Graticule mit sanfter Transition
-    const graticule = d3.geoGraticule()
-    svg
-      .append("path")
-      .datum(graticule())
-      .attr("d", path as unknown as string)
-      .attr("fill", "none")
-      .attr("stroke", "#1e3a5f")
-      .attr("stroke-width", 0.4 * (1 - transitionFactor))
-      .attr("stroke-opacity", 0.5 * globeOpacity)
+    // Graticule mit sanfter Transition - nur bei Standard-Globus oder stilisierter Darstellung
+    if (globeStyle === "standard" || globeOpacity > 0.3) {
+      const graticule = d3.geoGraticule()
+      svg
+        .append("path")
+        .datum(graticule())
+        .attr("d", path as unknown as string)
+        .attr("fill", "none")
+        .attr("stroke", globeStyle === "standard" ? "#3b82f6" : "#1e3a5f")
+        .attr("stroke-width", globeStyle === "standard" ? 0.3 : 0.4 * (1 - transitionFactor))
+        .attr("stroke-opacity", globeStyle === "standard" ? 0.3 : 0.5 * globeOpacity)
+    }
 
     // Länder - alle werden angezeigt, aber bei flacher Ansicht werden nur relevante hervorgehoben
     const features = (geoData as { features: Array<{ id: string; properties: Record<string, unknown> }> }).features
@@ -1001,6 +1049,13 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       .attr("fill", (d: { id: string }) => {
         const alpha3 = numericToAlpha3[d.id]
         const status = alpha3 ? getCountryStatus(alpha3) : null
+        if (globeStyle === "standard") {
+          // Standard-Globus: Einfache Farben
+          if (status === "visited") return "#4ade80" // helleres Grün
+          if (status === "lived") return "#fbbf24" // helleres Gelb
+          if (status === "bucket-list") return "#60a5fa" // helleres Blau
+          return "#64748b" // neutrales Grau
+        }
         return getStatusColor(status)
       })
       .attr("stroke", (d: { id: string }) => {
@@ -1495,6 +1550,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     onEventClick,
     selectedMemberId,
     showMembers,
+    globeStyle, // Add globeStyle to dependencies
   ])
 
   // Get selected member data
@@ -1682,6 +1738,19 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
         {/* Toggle-Buttons */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 z-20">
+          {/* Globus-Stil Toggle */}
+          <button
+            onClick={() => setGlobeStyle(globeStyle === "styled" ? "standard" : "styled")}
+            className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
+              globeStyle === "standard"
+                ? "bg-blue-500/90 text-white border-blue-400"
+                : "bg-card/95 text-foreground border-border hover:bg-accent"
+            }`}
+            title={globeStyle === "styled" ? "Standard-Globus anzeigen" : "Stilisierte Darstellung anzeigen"}
+          >
+            <span className="text-sm font-medium">🌍 {globeStyle === "styled" ? "Standard" : "Stilisiert"}</span>
+          </button>
+
           {/* Member-Toggle */}
           <button
             onClick={() => {
