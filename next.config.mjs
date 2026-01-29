@@ -12,18 +12,18 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  // CesiumJS Webpack-Konfiguration
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      }
-    }
-    return config
-  },
+  // Webpack-Konfiguration (nur wenn nötig)
+  // webpack: (config, { isServer }) => {
+  //   if (!isServer) {
+  //     config.resolve.fallback = {
+  //       ...config.resolve.fallback,
+  //       fs: false,
+  //       net: false,
+  //       tls: false,
+  //     }
+  //   }
+  //   return config
+  // },
   // Behebt WebKit Error 300
   async headers() {
     return [
