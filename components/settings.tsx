@@ -31,7 +31,7 @@ export function Settings({ onOpenYearInReview }: SettingsProps) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `wanderlust-backup-${new Date().toISOString().split("T")[0]}.json`
+    a.download = `cio-venture-backup-${new Date().toISOString().split("T")[0]}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -57,12 +57,12 @@ export function Settings({ onOpenYearInReview }: SettingsProps) {
   }
 
   const handleReset = () => {
-    localStorage.removeItem("wanderlust-travels")
+    localStorage.removeItem("cio-venture-travels")
     window.location.reload()
   }
 
   const handleResetOnboarding = () => {
-    localStorage.removeItem("wanderlust-onboarding-complete")
+    localStorage.removeItem("cio-venture-onboarding-complete")
     window.location.reload()
   }
 
@@ -214,7 +214,7 @@ export function Settings({ onOpenYearInReview }: SettingsProps) {
 
       {/* App Info */}
       <div className="text-center text-xs text-muted-foreground pt-4">
-        <p>Wanderlust v2.0</p>
+        <p>CIO-Venture v2.0</p>
         <p>Deine Daten werden lokal gespeichert</p>
       </div>
     </div>

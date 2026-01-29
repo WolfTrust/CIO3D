@@ -8,7 +8,7 @@ export function ThemeToggle() {
   const [isDark, setIsDark] = useState(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem("wanderlust-theme")
+    const saved = localStorage.getItem("cio-venture-theme")
     if (saved) {
       setIsDark(saved === "dark")
       document.documentElement.classList.toggle("light", saved === "light")
@@ -19,7 +19,7 @@ export function ThemeToggle() {
     const newTheme = isDark ? "light" : "dark"
     setIsDark(!isDark)
     document.documentElement.classList.toggle("light", !isDark)
-    localStorage.setItem("wanderlust-theme", newTheme)
+    localStorage.setItem("cio-venture-theme", newTheme)
   }
 
   return (

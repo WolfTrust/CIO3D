@@ -37,7 +37,7 @@ export function UserProfile() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem("wanderlust-profile")
+    const saved = localStorage.getItem("cio-venture-profile")
     if (saved) {
       const parsed = JSON.parse(saved)
       setProfile(parsed)
@@ -47,7 +47,7 @@ export function UserProfile() {
 
   const handleSave = () => {
     setProfile(editedProfile)
-    localStorage.setItem("wanderlust-profile", JSON.stringify(editedProfile))
+    localStorage.setItem("cio-venture-profile", JSON.stringify(editedProfile))
     setIsEditing(false)
   }
 

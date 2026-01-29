@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Wanderlust - Deine Reise-Weltkarte",
+  title: "CIO-Venture - Deine Reise-Weltkarte",
   description:
     "Die ultimative Reise-Tracking App. Markiere besuchte Länder, plane deine Bucket List und visualisiere deine Weltreise auf einem interaktiven 3D-Globus.",
   generator: "v0.app",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Wanderlust",
+    title: "CIO-Venture",
   },
   icons: {
     icon: [
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     apple: "/apple-icon.jpg",
   },
   openGraph: {
-    title: "Wanderlust - Deine Reise-Weltkarte",
+    title: "CIO-Venture - Deine Reise-Weltkarte",
     description: "Markiere besuchte Länder, plane deine Bucket List und visualisiere deine Weltreise.",
     type: "website",
     locale: "de_DE",

@@ -1,6 +1,6 @@
 {
-  "name": "Wanderlust - Deine Reise-Weltkarte",
-  "short_name": "Wanderlust",
+  "name": "CIO-Venture - Deine Reise-Weltkarte",
+  "short_name": "CIO-Venture",
   "description": "Markiere besuchte Länder, plane deine Bucket List und visualisiere deine Weltreise auf einem interaktiven 3D-Globus.",
   "start_url": "/",
   "display": "standalone",

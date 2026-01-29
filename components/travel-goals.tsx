@@ -40,7 +40,7 @@ const useGoalsStore = create<GoalsState>()(
           goals: state.goals.filter((g) => g.id !== id),
         })),
     }),
-    { name: "wanderlust-goals" },
+    { name: "cio-venture-goals" },
   ),
 )
 

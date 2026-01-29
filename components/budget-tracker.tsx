@@ -38,7 +38,7 @@ export function BudgetTracker() {
   const travels = useTravelStore((state) => state.travels)
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("wanderlust-expenses")
+      const saved = localStorage.getItem("cio-venture-expenses")
       return saved ? JSON.parse(saved) : []
     }
     return []
@@ -59,7 +59,7 @@ export function BudgetTracker() {
 
   const saveExpenses = (newExpenses: Expense[]) => {
     setExpenses(newExpenses)
-    localStorage.setItem("wanderlust-expenses", JSON.stringify(newExpenses))
+    localStorage.setItem("cio-venture-expenses", JSON.stringify(newExpenses))
   }
 
   const handleAddExpense = () => {

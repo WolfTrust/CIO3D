@@ -16,7 +16,7 @@ interface PlannedTrip {
 export function TripPlanner() {
   const [trips, setTrips] = useState<PlannedTrip[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("wanderlust-planned-trips")
+      const saved = localStorage.getItem("cio-venture-planned-trips")
       return saved ? JSON.parse(saved) : []
     }
     return []
@@ -34,7 +34,7 @@ export function TripPlanner() {
 
   const saveTrips = (newTrips: PlannedTrip[]) => {
     setTrips(newTrips)
-    localStorage.setItem("wanderlust-planned-trips", JSON.stringify(newTrips))
+    localStorage.setItem("cio-venture-planned-trips", JSON.stringify(newTrips))
   }
 
   const handleAddTrip = () => {

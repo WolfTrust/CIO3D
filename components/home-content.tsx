@@ -8,7 +8,6 @@ import { BucketList } from "@/components/bucket-list"
 import { Achievements } from "@/components/achievements"
 import { Timeline } from "@/components/timeline"
 import { Settings } from "@/components/settings"
-import { CountryDetailModal } from "@/components/country-detail-modal"
 import { SearchCountries } from "@/components/search-countries"
 import { ShareCard } from "@/components/share-card"
 import { TravelStatsCharts } from "@/components/travel-stats-charts"
@@ -19,10 +18,15 @@ import { AchievementToast } from "@/components/achievement-toast"
 import { QuickAddButton } from "@/components/quick-add-button"
 import { Onboarding } from "@/components/onboarding"
 import { OfflineIndicator } from "@/components/offline-indicator"
+import { Members } from "@/components/members"
+import { Events } from "@/components/events"
+import { EventsAdmin } from "@/components/events-admin"
 
 export function HomeContent() {
   const [activeTab, setActiveTab] = useState("map")
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [showEventsAdmin, setShowEventsAdmin] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [showWelcome, setShowWelcome] = useState(true)
@@ -31,14 +35,14 @@ export function HomeContent() {
   const globeRef = useRef<GlobeMapHandle>(null)
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem("wanderlust-onboarding-complete")
+    const hasSeenOnboarding = localStorage.getItem("cio-venture-onboarding-complete")
     if (!hasSeenOnboarding) {
       setShowOnboarding(true)
     }
   }, [])
 
   const handleOnboardingComplete = useCallback(() => {
-    localStorage.setItem("wanderlust-onboarding-complete", "true")
+    localStorage.setItem("cio-venture-onboarding-complete", "true")
     setShowOnboarding(false)
   }, [])
 
@@ -83,6 +87,11 @@ export function HomeContent() {
     }, 100)
   }, [])
 
+  const handleEventClick = useCallback((eventId: string) => {
+    setSelectedEventId(eventId)
+    setActiveTab("events")
+  }, [])
+
   return (
     <main className="min-h-screen flex flex-col bg-background">
       {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
@@ -98,11 +107,27 @@ export function HomeContent() {
       <div className="flex-1 overflow-hidden relative">
         {activeTab === "map" && (
           <>
-            <GlobeMap ref={globeRef} onCountryClick={handleCountryClick} />
+            <GlobeMap ref={globeRef} onCountryClick={handleCountryClick} selectedCountry={selectedCountry} onEventClick={handleEventClick} />
             {showWelcome && (
               <WelcomeOverlay onStartExploring={handleStartExploring} onCountryClick={handleWelcomeCountryClick} />
             )}
           </>
+        )}
+        {activeTab === "members" && <Members />}
+        {activeTab === "events" && (
+          showEventsAdmin ? (
+            <EventsAdmin onBack={() => setShowEventsAdmin(false)} />
+          ) : (
+            <div className="relative h-full">
+              <Events selectedEventId={selectedEventId} onEventSelect={setSelectedEventId} />
+              <button
+                onClick={() => setShowEventsAdmin(true)}
+                className="absolute top-4 right-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors shadow-lg z-10"
+              >
+                Admin
+              </button>
+            </div>
+          )
         )}
         {activeTab === "explore" && <ExploreTab onSelectCountry={handleExploreCountrySelect} />}
         {activeTab === "countries" && <CountryList onCountryClick={handleCountryClick} />}
@@ -119,7 +144,6 @@ export function HomeContent() {
         />
       </div>
 
-      {selectedCountry && <CountryDetailModal countryId={selectedCountry} onClose={() => setSelectedCountry(null)} />}
 
       <ShareCard isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} />
 

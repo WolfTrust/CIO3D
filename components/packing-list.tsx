@@ -41,7 +41,7 @@ const DEFAULT_CATEGORIES = [
 export function PackingList() {
   const [items, setItems] = useState<PackingItem[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("wanderlust-packing")
+      const saved = localStorage.getItem("cio-venture-packing")
       return saved ? JSON.parse(saved) : []
     }
     return []
@@ -53,7 +53,7 @@ export function PackingList() {
 
   const saveItems = (newItems: PackingItem[]) => {
     setItems(newItems)
-    localStorage.setItem("wanderlust-packing", JSON.stringify(newItems))
+    localStorage.setItem("cio-venture-packing", JSON.stringify(newItems))
   }
 
   const handleAddItem = () => {

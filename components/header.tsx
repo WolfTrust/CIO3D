@@ -1,6 +1,6 @@
 "use client"
 
-import { Globe, Map, BarChart3, Trophy, ListTodo, Clock, Settings, Search, Share2, Compass } from "lucide-react"
+import { Globe, Map, BarChart3, Trophy, ListTodo, Clock, Settings, Search, Share2, Compass, Users, Calendar } from "lucide-react"
 
 interface HeaderProps {
   activeTab: string
@@ -11,7 +11,9 @@ interface HeaderProps {
 
 export function Header({ activeTab, onTabChange, onSearchClick, onShareClick }: HeaderProps) {
   const tabs = [
-    { id: "map", label: "Karte", icon: Map },
+    { id: "map", label: "Map", icon: Map },
+    { id: "members", label: "Members", icon: Users },
+    { id: "events", label: "Events", icon: Calendar },
     { id: "explore", label: "Entdecken", icon: Compass },
     { id: "countries", label: "Länder", icon: Globe },
     { id: "timeline", label: "Timeline", icon: Clock },
@@ -28,7 +30,7 @@ export function Header({ activeTab, onTabChange, onSearchClick, onShareClick }: 
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Globe className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg hidden sm:block">Wanderlust</span>
+          <span className="font-semibold text-lg hidden sm:block">CIO-Venture</span>
         </div>
 
         <div className="flex items-center gap-2">

@@ -30,7 +30,7 @@ export function ShareCard({ isOpen, onClose }: ShareCardProps) {
 
 ${continentList}
 
-Tracke deine Reisen mit Wanderlust!`
+Tracke deine Reisen mit CIO-Venture!`
   }, [stats])
 
   const handleShare = async () => {
@@ -69,7 +69,7 @@ Tracke deine Reisen mit Wanderlust!`
             className="bg-gradient-to-br from-primary/20 via-background to-chart-2/20 rounded-xl p-6 border border-border"
           >
             <div className="text-center mb-4">
-              <h4 className="text-2xl font-bold">Wanderlust</h4>
+              <h4 className="text-2xl font-bold">CIO-Venture</h4>
               <p className="text-sm text-muted-foreground">Meine Reise-Statistik</p>
             </div>
 

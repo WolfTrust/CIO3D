@@ -150,7 +150,7 @@ export function CountryDetailModal({ countryId, onClose }: CountryDetailModalPro
     )
   }
 
-  if (isMapFullscreen && (currentStatus === "visited" || currentStatus === "lived")) {
+  if (isMapFullscreen) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
         {/* Fullscreen Header */}
@@ -233,18 +233,16 @@ export function CountryDetailModal({ countryId, onClose }: CountryDetailModalPro
         <div className="px-5 pb-5 max-h-[75vh] sm:max-h-[65vh] overflow-y-auto space-y-4">
           <WeatherWidget countryId={country.id} />
 
-          {/* 2D Map mit Fullscreen-Button */}
-          {(currentStatus === "visited" || currentStatus === "lived") && (
-            <div className="relative">
-              <CountryMap2D countryId={country.id} onAddLocation={handleAddLocationFromMap} />
-              <button
-                onClick={() => setIsMapFullscreen(true)}
-                className="absolute top-12 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm hover:bg-background transition-colors shadow-md"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+          {/* 2D Map mit Fullscreen-Button - immer anzeigen */}
+          <div className="relative">
+            <CountryMap2D countryId={country.id} onAddLocation={handleAddLocationFromMap} />
+            <button
+              onClick={() => setIsMapFullscreen(true)}
+              className="absolute top-12 right-3 p-2 rounded-lg bg-background/80 backdrop-blur-sm hover:bg-background transition-colors shadow-md"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
 
           {/* Status Selection */}
           <div>

@@ -57,9 +57,9 @@ export function WelcomeOverlay({ onStartExploring, onCountryClick }: WelcomeOver
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Willkommen bei Wanderlust</h1>
+            <h1 className="text-2xl font-bold">Welcome to the global CIO Venture Network</h1>
             <p className="text-muted-foreground text-sm">
-              Verfolge deine Reisen, entdecke neue Ziele und teile deine Abenteuer mit der Welt.
+              Establish Lifetime Relationships
             </p>
           </div>
 

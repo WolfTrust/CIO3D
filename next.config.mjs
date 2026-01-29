@@ -6,7 +6,34 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
- 
+  // Umgehe Netzwerk-Interface-Problem
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  // Behebt WebKit Error 300
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig

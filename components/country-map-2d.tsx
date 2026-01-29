@@ -5,6 +5,7 @@ import * as d3 from "d3"
 import * as topojson from "topojson-client"
 import type { Topology, GeometryCollection } from "topojson-specification"
 import { useTravelStore, type TravelLocation } from "@/lib/travel-store"
+import { useMembersStore } from "@/lib/members-store"
 import { countries, alpha3ToCountryId } from "@/lib/countries-data"
 import {
   Building2,
@@ -175,9 +176,20 @@ export function CountryMap2D({ countryId, onAddLocation, fullscreen = false }: C
 
   const tripData = useTravelStore((state) => state.tripData)
   const locations = tripData[countryId]?.locations || []
+  const members = useMembersStore((state) => state.members)
 
   const country = useMemo(() => countries.find((c) => c.id === countryId), [countryId])
   const alpha3 = countryIdToAlpha3[countryId]
+  
+  // Filtere Mitglieder, die in diesem Land sind
+  const countryMembers = useMemo(() => {
+    if (!countryId) return []
+    // Country-ID ist bereits der 2-Letter-Code (z.B. "de"), genau wie in member.country gespeichert
+    const countryCode = countryId.toLowerCase()
+    return members.filter(
+      (member) => member.coordinates && member.city && member.country?.toLowerCase() === countryCode
+    )
+  }, [members, countryId])
 
   // Numeric ID mapping for topojson
   const alpha3ToNumeric: Record<string, string> = useMemo(
@@ -374,7 +386,12 @@ export function CountryMap2D({ countryId, onAddLocation, fullscreen = false }: C
     if (!alpha3) return
 
     fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        return res.json()
+      })
       .then((topology: Topology<{ countries: GeometryCollection }>) => {
         const geo = topojson.feature(topology, topology.objects.countries) as unknown as GeoJSON.FeatureCollection
         const numericId = alpha3ToNumeric[alpha3]
@@ -383,7 +400,23 @@ export function CountryMap2D({ countryId, onAddLocation, fullscreen = false }: C
           setCountryFeature(feature)
         }
       })
-      .catch(console.error)
+      .catch((error) => {
+        console.error("Fehler beim Laden der GeoJSON-Daten:", error)
+        // Versuche alternativen CDN
+        fetch("https://unpkg.com/world-atlas@2/countries-110m.json")
+          .then((res) => res.json())
+          .then((topology: Topology<{ countries: GeometryCollection }>) => {
+            const geo = topojson.feature(topology, topology.objects.countries) as unknown as GeoJSON.FeatureCollection
+            const numericId = alpha3ToNumeric[alpha3]
+            const feature = geo.features.find((f: GeoJSON.Feature) => f.id === numericId)
+            if (feature) {
+              setCountryFeature(feature)
+            }
+          })
+          .catch((err) => {
+            console.error("Auch alternativer CDN fehlgeschlagen:", err)
+          })
+      })
   }, [alpha3, alpha3ToNumeric])
 
   // Get location coordinates

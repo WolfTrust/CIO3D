@@ -149,7 +149,7 @@ export const useTravelStore = create<TravelState>()(
       },
     }),
     {
-      name: "wanderlust-travels",
+      name: "cio-venture-travels",
     },
   ),
 )

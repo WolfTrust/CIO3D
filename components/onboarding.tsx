@@ -14,7 +14,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const steps = [
     {
       icon: Globe,
-      title: "Willkommen bei Wanderlust",
+      title: "Willkommen bei CIO-Venture",
       description: "Deine persönliche Weltkarte, um alle Reisen zu dokumentieren und neue Abenteuer zu planen.",
       color: "from-blue-500 to-cyan-500",
     },
