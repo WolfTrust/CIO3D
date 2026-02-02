@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { EventsHydration } from "@/components/events-hydration"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -57,6 +58,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-sans antialiased overscroll-none">
+        <EventsHydration />
         {children}
         <Analytics />
       </body>

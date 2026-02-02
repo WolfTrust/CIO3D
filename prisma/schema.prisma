@@ -1,0 +1,28 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Event {
+  id             String   @id @default(cuid())
+  title          String
+  description    String
+  city           String
+  country        String
+  latitude       Float
+  longitude      Float
+  startDate      DateTime
+  endDate        DateTime
+  imageUrl       String?
+  maxParticipants Int?
+  category       String   // strategic | networking | training | conference | workshop | other
+  status         String   // upcoming | ongoing | completed | cancelled
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

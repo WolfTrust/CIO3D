@@ -22,7 +22,9 @@ export interface Event {
 
 interface EventsState {
   events: Event[]
+  setEvents: (events: Event[]) => void
   addEvent: (event: Omit<Event, "id" | "createdAt" | "updatedAt">) => void
+  addEventFromServer: (event: Event) => void
   updateEvent: (id: string, event: Partial<Omit<Event, "id" | "createdAt" | "updatedAt">>) => void
   deleteEvent: (id: string) => void
   getEvent: (id: string) => Event | undefined
@@ -34,6 +36,22 @@ export const useEventsStore = create<EventsState>()(
   persist(
     (set, get) => ({
       events: [],
+
+      setEvents: (events) => {
+        set({
+          events: [...events].sort(
+            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          ),
+        })
+      },
+
+      addEventFromServer: (event) => {
+        set((state) => ({
+          events: [...state.events, event].sort(
+            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          ),
+        }))
+      },
 
       addEvent: (event) => {
         const now = new Date().toISOString()

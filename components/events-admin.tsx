@@ -21,6 +21,7 @@ interface EventsAdminProps {
 export function EventsAdmin({ onBack }: EventsAdminProps) {
   const events = useEventsStore((state) => state.events)
   const addEvent = useEventsStore((state) => state.addEvent)
+  const addEventFromServer = useEventsStore((state) => state.addEventFromServer)
   const updateEvent = useEventsStore((state) => state.updateEvent)
   const deleteEvent = useEventsStore((state) => state.deleteEvent)
 
@@ -119,7 +120,7 @@ export function EventsAdmin({ onBack }: EventsAdminProps) {
     setCitySuggestions([])
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title || !formData.city || !formData.startDate || !formData.endDate) {
       alert("Bitte füllen Sie alle Pflichtfelder aus")
@@ -140,16 +141,42 @@ export function EventsAdmin({ onBack }: EventsAdminProps) {
       status: formData.status || "upcoming",
     }
 
-    if (editingId) {
-      updateEvent(editingId, eventData)
-    } else {
-      addEvent(eventData)
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/events/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventData),
+        })
+        if (res.ok) updateEvent(editingId, eventData)
+        else addEvent(eventData)
+      } else {
+        const res = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventData),
+        })
+        if (res.ok) {
+          const created = await res.json()
+          addEventFromServer(created)
+        } else {
+          addEvent(eventData)
+        }
+      }
+    } catch {
+      if (editingId) updateEvent(editingId, eventData)
+      else addEvent(eventData)
     }
     handleCloseForm()
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm("Möchten Sie dieses Event wirklich löschen?")) {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Möchten Sie dieses Event wirklich löschen?")) return
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: "DELETE" })
+      if (res.ok) deleteEvent(id)
+      else deleteEvent(id)
+    } catch {
       deleteEvent(id)
     }
   }
@@ -171,10 +198,23 @@ export function EventsAdmin({ onBack }: EventsAdminProps) {
               </Button>
             )}
             <Button
-              onClick={() => {
+              onClick={async () => {
                 if (events.length === 0) {
-                  initialEvents.forEach(event => addEvent(event))
-                  alert("Beispiel-Events wurden geladen!")
+                  try {
+                    for (const event of initialEvents) {
+                      const res = await fetch("/api/events", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(event),
+                      })
+                      if (res.ok) addEventFromServer(await res.json())
+                      else addEvent(event)
+                    }
+                    alert("Beispiel-Events wurden geladen!")
+                  } catch {
+                    initialEvents.forEach((event) => addEvent(event))
+                    alert("Beispiel-Events (lokal) wurden geladen!")
+                  }
                 }
               }}
               variant="outline"
