@@ -6,6 +6,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Server-Pakete nicht mit Webpack bündeln (vermeidet Fehler mit pg/Prisma auf Render)
+  serverExternalPackages: ['pg', '@prisma/adapter-pg', '@prisma/client', 'prisma'],
   // Umgehe Netzwerk-Interface-Problem
   experimental: {
     serverActions: {
