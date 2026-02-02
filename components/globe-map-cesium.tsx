@@ -157,6 +157,178 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     return filtered
   }, [relationships, showRelationships, selectedCountry, selectedMemberId, members])
 
+  // ===== ZOOM FUNCTIONS =====
+  // WICHTIG: Diese Funktionen ändern NUR die Kamera-Position, keine Imagery-Layers!
+  const zoomIn = useCallback(() => {
+    console.log("🔍 zoomIn aufgerufen, isInitialized:", isInitialized)
+    const viewer = viewerRef.current
+    
+    // Guard: Prüfe ob Viewer initialisiert ist
+    if (!isInitialized) {
+      console.warn("⚠️ zoomIn: Viewer noch nicht initialisiert")
+      return
+    }
+    
+    // Guard: Prüfe ob Viewer existiert und nicht destroyed ist
+    if (!viewer) {
+      console.warn("⚠️ zoomIn: viewerRef.current ist null")
+      return
+    }
+    
+    if (typeof viewer.isDestroyed === "function" && viewer.isDestroyed()) {
+      console.warn("⚠️ zoomIn: Viewer ist destroyed")
+      return
+    }
+    
+    // Guard: Prüfe ob scene und camera verfügbar sind
+    if (!viewer.scene || !viewer.camera) {
+      console.warn("⚠️ zoomIn: scene oder camera nicht verfügbar", {
+        hasScene: !!viewer.scene,
+        hasCamera: !!viewer.camera
+      })
+      return
+    }
+    
+    // Guard: Stelle sicher, dass Imagery-Layers nicht beeinflusst werden
+    const imageryLayersBefore = viewer.imageryLayers.length
+    
+    try {
+      const currentHeight = viewer.camera.positionCartographic.height
+      // Zoom-In: Reduziere Höhe um 25% (näher ran)
+      const newHeight = currentHeight * 0.75
+      
+      // Stelle sicher, dass wir nicht zu nah kommen (Minimum 100m)
+      const finalHeight = Math.max(newHeight, 100)
+      
+      console.log("🔍 Zoom-In: currentHeight=", currentHeight.toFixed(0), "m, newHeight=", finalHeight.toFixed(0), "m")
+      
+      // Hole aktuelle Position und Orientierung
+      const currentPosition = viewer.camera.positionCartographic
+      const currentHeading = viewer.camera.heading
+      const currentPitch = viewer.camera.pitch
+      const currentRoll = viewer.camera.roll
+      
+      // Setze neue Position mit reduzierter Höhe
+      const Cesium = (viewer as any).cesium
+      if (Cesium) {
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromRadians(
+            currentPosition.longitude,
+            currentPosition.latitude,
+            finalHeight
+          ),
+          orientation: {
+            heading: currentHeading,
+            pitch: currentPitch,
+            roll: currentRoll
+          }
+        })
+      } else {
+        // Fallback: Verwende zoomIn mit größerem Betrag
+        const amount = Math.max(currentHeight * 0.25, 1000)
+        viewer.camera.zoomIn(amount)
+      }
+      
+      // Force render
+      viewer.scene.requestRender()
+      
+      // Prüfe, dass Imagery-Layers unverändert sind
+      const imageryLayersAfter = viewer.imageryLayers.length
+      if (imageryLayersBefore !== imageryLayersAfter) {
+        console.error("❌ FEHLER: Imagery-Layers wurden verändert!", imageryLayersBefore, "->", imageryLayersAfter)
+      }
+      
+      console.log("✅ zoomIn erfolgreich, neue Höhe:", viewer.camera.positionCartographic.height.toFixed(0), "m, Imagery-Layers:", imageryLayersAfter)
+    } catch (error) {
+      console.error("❌ zoomIn Fehler:", error)
+    }
+  }, [isInitialized])
+
+  const zoomOut = useCallback(() => {
+    console.log("🔍 zoomOut aufgerufen, isInitialized:", isInitialized)
+    const viewer = viewerRef.current
+    
+    // Guard: Prüfe ob Viewer initialisiert ist
+    if (!isInitialized) {
+      console.warn("⚠️ zoomOut: Viewer noch nicht initialisiert")
+      return
+    }
+    
+    // Guard: Prüfe ob Viewer existiert und nicht destroyed ist
+    if (!viewer) {
+      console.warn("⚠️ zoomOut: viewerRef.current ist null")
+      return
+    }
+    
+    if (typeof viewer.isDestroyed === "function" && viewer.isDestroyed()) {
+      console.warn("⚠️ zoomOut: Viewer ist destroyed")
+      return
+    }
+    
+    // Guard: Prüfe ob scene und camera verfügbar sind
+    if (!viewer.scene || !viewer.camera) {
+      console.warn("⚠️ zoomOut: scene oder camera nicht verfügbar", {
+        hasScene: !!viewer.scene,
+        hasCamera: !!viewer.camera
+      })
+      return
+    }
+    
+    // Guard: Stelle sicher, dass Imagery-Layers nicht beeinflusst werden
+    const imageryLayersBefore = viewer.imageryLayers.length
+    
+    try {
+      const currentHeight = viewer.camera.positionCartographic.height
+      // Zoom-Out: Erhöhe Höhe um 33% (weiter weg)
+      const newHeight = currentHeight * 1.33
+      
+      // Stelle sicher, dass wir nicht zu weit weg kommen (Maximum 50Mio m)
+      const finalHeight = Math.min(newHeight, 50_000_000)
+      
+      console.log("🔍 Zoom-Out: currentHeight=", currentHeight.toFixed(0), "m, newHeight=", finalHeight.toFixed(0), "m")
+      
+      // Hole aktuelle Position und Orientierung
+      const currentPosition = viewer.camera.positionCartographic
+      const currentHeading = viewer.camera.heading
+      const currentPitch = viewer.camera.pitch
+      const currentRoll = viewer.camera.roll
+      
+      // Setze neue Position mit erhöhter Höhe
+      const Cesium = (viewer as any).cesium
+      if (Cesium) {
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromRadians(
+            currentPosition.longitude,
+            currentPosition.latitude,
+            finalHeight
+          ),
+          orientation: {
+            heading: currentHeading,
+            pitch: currentPitch,
+            roll: currentRoll
+          }
+        })
+      } else {
+        // Fallback: Verwende zoomOut mit größerem Betrag
+        const amount = Math.max(currentHeight * 0.33, 1000)
+        viewer.camera.zoomOut(amount)
+      }
+      
+      // Force render
+      viewer.scene.requestRender()
+      
+      // Prüfe, dass Imagery-Layers unverändert sind
+      const imageryLayersAfter = viewer.imageryLayers.length
+      if (imageryLayersBefore !== imageryLayersAfter) {
+        console.error("❌ FEHLER: Imagery-Layers wurden verändert!", imageryLayersBefore, "->", imageryLayersAfter)
+      }
+      
+      console.log("✅ zoomOut erfolgreich, neue Höhe:", viewer.camera.positionCartographic.height.toFixed(0), "m, Imagery-Layers:", imageryLayersAfter)
+    } catch (error) {
+      console.error("❌ zoomOut Fehler:", error)
+    }
+  }, [isInitialized])
+
   // Initialize Cesium Viewer
   useEffect(() => {
     if (!cesiumContainerRef.current || isInitialized) return
@@ -165,17 +337,56 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     const initCesium = async () => {
       try {
         // Import Cesium CSS
+        // @ts-ignore - CSS-Import wird von Next.js gehandhabt
         await import("cesium/Build/Cesium/Widgets/widgets.css")
         
         // Import Cesium
         const Cesium = await import("cesium")
         
-        // Set Cesium Ion Access Token (optional - für bessere Tiles)
-        // Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE"
+        // WICHTIG: Setze Base URL für Cesium Assets
+        console.log("🔍 Setze Cesium Base URL...")
+        if (typeof (Cesium as any).buildModuleUrl !== "undefined" && (Cesium as any).buildModuleUrl.setBaseUrl) {
+          ;(Cesium as any).buildModuleUrl.setBaseUrl("/cesium/")
+          console.log("✅ Cesium Base URL gesetzt: /cesium/")
+        }
+        ;(window as any).CESIUM_BASE_URL = "/cesium"
+        
+        // Set Cesium Ion Access Token
+        const cesiumIonToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN
+        if (cesiumIonToken && cesiumIonToken.trim() !== "") {
+          Cesium.Ion.defaultAccessToken = cesiumIonToken.trim()
+          console.log("✅ Cesium Ion Token gesetzt")
+        }
 
-        // Erstelle Viewer ohne baseLayer (verwende Standard)
-        const viewer = new Cesium.Viewer(cesiumContainerRef.current!, {
+        // WICHTIG: Prüfe nochmal, ob Container verfügbar ist (nach async Import)
+        if (!cesiumContainerRef.current) {
+          console.error("❌ Container nicht verfügbar nach Cesium Import")
+          return
+        }
+
+        const container = cesiumContainerRef.current
+        
+        // Prüfe Container-Größe
+        const containerWidth = container.clientWidth
+        const containerHeight = container.clientHeight
+        if (containerWidth === 0 || containerHeight === 0) {
+          console.error("❌ Container hat keine Größe:", containerWidth, "x", containerHeight)
+          // Warte kurz und versuche es erneut
+          await new Promise(resolve => setTimeout(resolve, 100))
+          const retryWidth = container.clientWidth
+          const retryHeight = container.clientHeight
+          if (retryWidth === 0 || retryHeight === 0) {
+            console.error("❌ Container hat immer noch keine Größe nach Wartezeit")
+            return
+          }
+        }
+
+        console.log("📐 Container-Größe:", container.clientWidth, "x", container.clientHeight)
+
+        // Erstelle Viewer mit baseLayer: false
+        const viewer = new Cesium.Viewer(container, {
           terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+          baseLayer: false, // WICHTIG: Kein Standard-Layer
           baseLayerPicker: false,
           vrButton: false,
           geocoder: false,
@@ -194,82 +405,72 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         
         // Entferne alle Standard-Layers
         viewer.imageryLayers.removeAll()
+        console.log("🧹 Alle Imagery-Layers entfernt")
         
-        // Füge Imagery-Provider hinzu - verwende einfachen Ansatz mit Standard-Provider
-        // CesiumJS hat einen Standard-Provider, der funktionieren sollte
+        // ===== IMAGERY DEBUG & LOADING =====
+        console.log("🔍 === IMAGERY DEBUG START ===")
+        console.log("📊 viewer.imageryLayers.length (nach removeAll):", viewer.imageryLayers.length)
+        
+        // Versuche World Imagery zu laden (wie in GlobeBaseline.tsx)
         try {
-          // Versuche zuerst NaturalEarthII (lokal)
-          const naturalEarthUrl = Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
-          console.log("Versuche NaturalEarthII von:", naturalEarthUrl)
-          
-          const naturalEarthProvider = new Cesium.TileMapServiceImageryProvider({
-            url: naturalEarthUrl
+          console.log("🔄 Füge Cesium World Imagery hinzu...")
+          const worldImagery = await Cesium.createWorldImageryAsync({
+            style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
           })
-          
-          // Warte auf Ready
-          naturalEarthProvider.readyPromise.then(() => {
-            console.log("✓ NaturalEarthII ready")
-            const layer = viewer.imageryLayers.addImageryProvider(naturalEarthProvider)
+          const layer = viewer.imageryLayers.addImageryProvider(worldImagery)
+          layer.show = true
+          layer.alpha = 1.0
+          viewer.scene.requestRender()
+          console.log("✅ World Imagery hinzugefügt, neue length:", viewer.imageryLayers.length)
+          console.log("✅ Layer.show:", layer.show, "Layer.alpha:", layer.alpha)
+        } catch (error) {
+          console.error("❌ World Imagery fehlgeschlagen:", error)
+          // Fallback: OpenStreetMap
+          try {
+            console.log("🔄 Fallback: Versuche OpenStreetMap...")
+            const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+              url: "https://a.tile.openstreetmap.org/",
+            })
+            const layer = viewer.imageryLayers.addImageryProvider(osmProvider)
             layer.show = true
             layer.alpha = 1.0
             viewer.scene.requestRender()
-            console.log("✓ NaturalEarthII Layer hinzugefügt, Layers:", viewer.imageryLayers.length)
-          }).catch((error) => {
-            console.warn("NaturalEarthII readyPromise fehlgeschlagen:", error)
-            // Fallback: ArcGIS
-            tryArcGIS()
+            console.log("✅ OpenStreetMap hinzugefügt (Fallback)")
+          } catch (osmError) {
+            console.error("❌ OpenStreetMap fehlgeschlagen:", osmError)
+          }
+        }
+        
+        // Finale Prüfung
+        console.log("📊 Finale Imagery-Layers:", viewer.imageryLayers.length)
+        for (let i = 0; i < viewer.imageryLayers.length; i++) {
+          const layer = viewer.imageryLayers.get(i)
+          console.log(`  Layer ${i}:`, {
+            show: layer.show,
+            alpha: layer.alpha,
+            provider: layer.imageryProvider?.constructor?.name || "unknown"
           })
-        } catch (error) {
-          console.warn("NaturalEarthII Erstellung fehlgeschlagen:", error)
-          tryArcGIS()
         }
-        
-        function tryArcGIS() {
-          try {
-            console.log("Versuche ArcGIS...")
-            const arcgisProvider = new Cesium.ArcGisMapServerImageryProvider({
-              url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
-            })
-            
-            arcgisProvider.readyPromise.then(() => {
-              console.log("✓ ArcGIS ready")
-              const layer = viewer.imageryLayers.addImageryProvider(arcgisProvider)
-              layer.show = true
-              layer.alpha = 1.0
-              viewer.scene.requestRender()
-              console.log("✓ ArcGIS Layer hinzugefügt, Layers:", viewer.imageryLayers.length)
-            }).catch((error) => {
-              console.warn("ArcGIS readyPromise fehlgeschlagen:", error)
-              tryOpenStreetMap()
-            })
-          } catch (error) {
-            console.warn("ArcGIS Erstellung fehlgeschlagen:", error)
-            tryOpenStreetMap()
-          }
+        console.log("🔍 === IMAGERY DEBUG END ===")
+
+        // ===== WORLD TERRAIN (Höhen, Berge, Täler) =====
+        try {
+          const worldTerrain = await Cesium.createWorldTerrainAsync()
+          viewer.terrainProvider = worldTerrain
+          viewer.scene.requestRender()
+          console.log("✅ Cesium World Terrain geladen")
+        } catch (terrainError) {
+          console.warn("⚠️ World Terrain nicht geladen (Ion Token?):", terrainError)
         }
-        
-        function tryOpenStreetMap() {
-          try {
-            console.log("Versuche OpenStreetMap...")
-            const osmProvider = Cesium.createOpenStreetMapImageryProvider({
-              url: 'https://a.tile.openstreetmap.org/'
-            })
-            
-            osmProvider.readyPromise.then(() => {
-              console.log("✓ OpenStreetMap ready")
-              const layer = viewer.imageryLayers.addImageryProvider(osmProvider)
-              layer.show = true
-              layer.alpha = 1.0
-              viewer.scene.requestRender()
-              console.log("✓ OpenStreetMap Layer hinzugefügt, Layers:", viewer.imageryLayers.length)
-            }).catch((error) => {
-              console.error("OpenStreetMap readyPromise fehlgeschlagen:", error)
-              console.warn("⚠ Alle Provider fehlgeschlagen - Globus bleibt blau")
-            })
-          } catch (error) {
-            console.error("OpenStreetMap Erstellung fehlgeschlagen:", error)
-            console.warn("⚠ Alle Provider fehlgeschlagen - Globus bleibt blau")
-          }
+
+        // ===== 3D-GEBÄUDE (Cesium OSM Buildings – Städte erkennbar) =====
+        try {
+          const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188)
+          viewer.scene.primitives.add(osmBuildings)
+          viewer.scene.requestRender()
+          console.log("✅ 3D-Gebäude (OSM Buildings) geladen")
+        } catch (buildingsError) {
+          console.warn("⚠️ 3D-Gebäude nicht geladen (Ion Token?):", buildingsError)
         }
 
           // Configure scene
@@ -278,36 +479,79 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           viewer.scene.globe.dynamicAtmosphereLightingFromSun = true
           viewer.scene.globe.showWaterEffect = true
           viewer.scene.globe.showGroundAtmosphere = true
-          viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.5)
-          
-          // Verbesserte Sichtbarkeit
+          // Fallback-Farbe wenn Imagery fehlt (dunkelblau), sonst wirkt Globe schwarz
+          viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#0a1628")
           viewer.scene.globe.show = true
-          viewer.scene.skyBox.show = true
-          viewer.scene.sun.show = true
-          viewer.scene.moon.show = true
-          
-          // Stelle sicher, dass der Viewer gerendert wird
+          if (viewer.scene.skyBox) viewer.scene.skyBox.show = true
+          if (viewer.scene.sun) viewer.scene.sun.show = true
+          if (viewer.scene.moon) viewer.scene.moon.show = true
           viewer.scene.requestRender()
-          
-          // Debug: Log Viewer-Status
-          console.log("CesiumJS Viewer initialisiert:", {
-            container: cesiumContainerRef.current?.clientWidth + "x" + cesiumContainerRef.current?.clientHeight,
-            imageryLayers: viewer.imageryLayers.length,
-            globeVisible: viewer.scene.globe.show
-          })
-          
-          // Set initial camera position
+
+          // Kamera erst setzen, wenn Scene bereit ist (vermeidet Höhe 0)
+          await new Promise((r) => requestAnimationFrame(r))
+          await new Promise((r) => setTimeout(r, 50))
+          const initialHeightMeters = 15_000_000
+          const dest = Cesium.Cartesian3.fromDegrees(0, 0, initialHeightMeters)
           viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(0, 0, 15000000),
+            destination: dest,
             orientation: {
-              heading: Cesium.Math.toRadians(0),
+              heading: 0,
               pitch: Cesium.Math.toRadians(-90),
               roll: 0.0,
             },
           })
+          viewer.scene.requestRender()
+          const carto = viewer.camera.positionCartographic
+          const heightM = carto?.height ?? 0
+          console.log("CesiumJS Viewer initialisiert:", {
+            container: cesiumContainerRef.current?.clientWidth + "x" + cesiumContainerRef.current?.clientHeight,
+            imageryLayers: viewer.imageryLayers.length,
+            globeVisible: viewer.scene.globe.show,
+            cameraHeightM: Math.round(heightM),
+          })
 
           // Disable default double-click behavior
           viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
+
+          // ===== KAMERA-INPUT KONFIGURATION =====
+          const ssc = viewer.scene.screenSpaceCameraController
+          ssc.enableInputs = true
+          ssc.enableRotate = true
+          ssc.enableZoom = true
+          ssc.enableTilt = true
+          ssc.enableLook = true
+          ssc.enableTranslate = true
+          
+          // Zoom-Event-Typen
+          ssc.zoomEventTypes = [
+            Cesium.CameraEventType.WHEEL,
+            Cesium.CameraEventType.PINCH
+          ]
+          
+          // Rotate-Event-Typen
+          ssc.rotateEventTypes = [Cesium.CameraEventType.LEFT_DRAG]
+          
+          // Tilt-Event-Typen (nicht PINCH, damit Zoom nicht blockiert wird)
+          ssc.tiltEventTypes = [Cesium.CameraEventType.MIDDLE_DRAG]
+          ssc.lookEventTypes = [Cesium.CameraEventType.MIDDLE_DRAG]
+          
+          // Zoom-Limits: min 500m, damit Kamera nicht auf 0/1m fällt (schwarzer Blick)
+          ssc.minimumZoomDistance = 500
+          ssc.maximumZoomDistance = 50_000_000
+          ssc.zoomFactor = 5.0
+          
+          console.log("✅ Kamera-Input konfiguriert")
+
+          // Kamera nach Controller-Setup erneut setzen (verhindert Höhe 0 durch Defaults)
+          viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, initialHeightMeters),
+            orientation: {
+              heading: 0,
+              pitch: Cesium.Math.toRadians(-90),
+              roll: 0.0,
+            },
+          })
+          viewer.scene.requestRender()
 
           // Store Cesium instance in viewer for later use
           ;(viewer as any).cesium = Cesium
@@ -323,12 +567,19 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     initCesium()
 
     return () => {
+      // Cleanup: Nur beim Unmount, nicht wenn isInitialized sich ändert
       if (viewerRef.current) {
-        viewerRef.current.destroy()
+        try {
+          if (!viewerRef.current.isDestroyed()) {
+            viewerRef.current.destroy()
+          }
+        } catch (error) {
+          console.warn("⚠️ Fehler beim Destroy des Viewers:", error)
+        }
         viewerRef.current = null
       }
     }
-  }, [isInitialized])
+  }, []) // WICHTIG: Leeres Array - nur einmal beim Mount, nicht bei isInitialized-Änderungen
 
   // Add location pins
   useEffect(() => {
@@ -341,8 +592,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     const entities = viewer.entities
 
     // Remove existing location pins
-    const existingPins = entities.values.filter(e => e.id?.startsWith("location-pin-"))
-    existingPins.forEach(pin => entities.remove(pin))
+    const existingPins = entities.values.filter((e: any) => e.id?.startsWith("location-pin-"))
+    existingPins.forEach((pin: any) => entities.remove(pin))
 
     // Add new location pins
     locationPins.forEach((pin) => {
@@ -375,7 +626,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     })
 
     // Add click handlers
-    viewer.selectedEntityChanged.addEventListener((selectedEntity) => {
+    viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
       if (selectedEntity && selectedEntity.id?.startsWith("location-pin-")) {
         const pinId = selectedEntity.id.replace("location-pin-", "")
         const pin = locationPins.find(p => p.id === pinId)
@@ -386,10 +637,10 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     })
 
     // Add hover handlers
-    viewer.cesiumWidget.canvas.addEventListener("mousemove", (event) => {
-      const pickedObject = viewer.scene.pick(new Cesium.Cartesian2(event.clientX, event.clientY))
-      if (pickedObject && Cesium.defined(pickedObject.id) && pickedObject.id.id?.startsWith("location-pin-")) {
-        const entity = pickedObject.id as Cesium.Entity
+    viewer.cesiumWidget.canvas.addEventListener("mousemove", (event: MouseEvent) => {
+      const pickedObject = viewer.scene.pick(new (Cesium as any).Cartesian2(event.clientX, event.clientY))
+      if (pickedObject && (Cesium as any).defined(pickedObject.id) && pickedObject.id.id?.startsWith("location-pin-")) {
+        const entity = pickedObject.id as any
         if (entity.label) {
           entity.label.show = true
         }
@@ -403,21 +654,26 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     })
   }, [locationPins, isInitialized, onCountryClick, hoveredEntity])
 
-  // Add member pins
+  // Add/remove member pins (beim Ausschalten von „Mitglieder“ Pins entfernen)
   useEffect(() => {
-    if (!viewerRef.current || !isInitialized || !showMembers || showEvents) return
+    if (!viewerRef.current || !isInitialized) return
 
     const viewer = viewerRef.current
     const Cesium = (viewer as any).cesium
     if (!Cesium) return
-    
+
     const entities = viewer.entities
 
-    // Remove existing member pins
-    const existingPins = entities.values.filter(e => e.id?.startsWith("member-pin-"))
-    existingPins.forEach(pin => entities.remove(pin))
+    // Immer zuerst bestehende Member-Pins entfernen (auch wenn ausgeschaltet)
+    const existingPins = entities.values.filter((e: any) => e.id?.startsWith("member-pin-"))
+    existingPins.forEach((pin: any) => entities.remove(pin))
 
-    // Add new member pins
+    // Nur neue Pins hinzufügen, wenn „Mitglieder“ an und „Events“ aus
+    if (!showMembers || showEvents) {
+      viewer.scene.requestRender()
+      return
+    }
+
     memberPins.forEach((memberPin) => {
       const [lat, lon] = memberPin.coordinates
 
@@ -446,7 +702,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     })
 
     // Update click handler
-    viewer.selectedEntityChanged.addEventListener((selectedEntity) => {
+    viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
       if (selectedEntity && selectedEntity.id?.startsWith("member-pin-")) {
         const memberId = selectedEntity.id.replace("member-pin-", "")
         setSelectedMemberId(memberId)
@@ -467,8 +723,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     const entities = viewer.entities
 
     // Remove existing event pins
-    const existingPins = entities.values.filter(e => e.id?.startsWith("event-pin-"))
-    existingPins.forEach(pin => entities.remove(pin))
+    const existingPins = entities.values.filter((e: any) => e.id?.startsWith("event-pin-"))
+    existingPins.forEach((pin: any) => entities.remove(pin))
 
     // Add new event pins
     eventPins.forEach((eventPin) => {
@@ -499,7 +755,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     })
 
     // Update click handler
-    viewer.selectedEntityChanged.addEventListener((selectedEntity) => {
+    viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
       if (selectedEntity && selectedEntity.id?.startsWith("event-pin-")) {
         const eventId = selectedEntity.id.replace("event-pin-", "")
         if (onEventClick) {
@@ -509,24 +765,28 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     })
   }, [eventPins, showEvents, isInitialized, onEventClick])
 
-  // Add relationship lines
+  // Add/remove relationship lines (beim Ausschalten von „Beziehungen“ Linien entfernen)
   useEffect(() => {
-    if (!viewerRef.current || !isInitialized || (!showRelationships && !selectedMemberId)) return
+    if (!viewerRef.current || !isInitialized) return
 
     const viewer = viewerRef.current
     const Cesium = (viewer as any).cesium
     if (!Cesium) return
-    
+
     const entities = viewer.entities
 
-    // Remove existing relationship lines
-    const existingLines = entities.values.filter(e => e.id?.startsWith("relationship-"))
-    existingLines.forEach(line => entities.remove(line))
+    // Immer zuerst bestehende Beziehungs-Linien entfernen (auch wenn ausgeschaltet)
+    const existingLines = entities.values.filter((e: any) => e.id?.startsWith("relationship-"))
+    existingLines.forEach((line: any) => entities.remove(line))
 
-    // Create members map
+    // Nur neue Linien hinzufügen, wenn „Beziehungen“ an oder ein Member ausgewählt ist
+    if (!showRelationships && !selectedMemberId) {
+      viewer.scene.requestRender()
+      return
+    }
+
     const membersMap = new Map(members.map(m => [m.id, m]))
 
-    // Add relationship lines
     filteredRelationships.forEach((rel) => {
       const fromMember = membersMap.get(rel.fromMemberId)
       const toMember = membersMap.get(rel.toMemberId)
@@ -679,11 +939,105 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       <div
         ref={cesiumContainerRef}
         className="flex-1 relative overflow-hidden"
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", touchAction: "none" }}
       />
 
-      {/* Toggle-Buttons */}
-      <div className="absolute top-3 left-3 flex flex-col gap-2 z-20">
+      {/* Zoom-Buttons - WICHTIG: Außerhalb des Cesium Containers, damit Events nicht abgefangen werden */}
+      <div 
+        className="absolute top-3 right-3 flex flex-col gap-2" 
+        style={{ 
+          pointerEvents: "auto", 
+          zIndex: 99999
+        }}
+      >
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            console.log("🔘 + Button geklickt, isInitialized:", isInitialized, "viewerRef:", !!viewerRef.current)
+            console.log("🔘 zoomIn Funktion verfügbar:", typeof zoomIn === "function")
+            if (isInitialized && viewerRef.current) {
+              console.log("🔘 Rufe zoomIn() auf...")
+              try {
+                zoomIn()
+              } catch (error) {
+                console.error("❌ Fehler beim Aufruf von zoomIn():", error)
+              }
+            } else {
+              console.warn("⚠️ Zoom-In: Viewer noch nicht initialisiert oder viewerRef null", {
+                isInitialized,
+                hasViewerRef: !!viewerRef.current
+              })
+            }
+          }}
+          onMouseDown={(e) => {
+            // WICHTIG: Nur stopPropagation, kein preventDefault() - sonst wird onClick blockiert
+            e.stopPropagation()
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation()
+          }}
+          disabled={!isInitialized}
+          className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors shadow-lg ${
+            isInitialized
+              ? "bg-card/95 text-foreground border-border hover:bg-accent cursor-pointer"
+              : "bg-card/50 text-muted-foreground border-border/50 cursor-not-allowed opacity-50"
+          }`}
+          title={isInitialized ? "Hineinzoomen" : "Wird geladen..."}
+          type="button"
+        >
+          <span className="text-lg font-bold">+</span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            console.log("🔘 − Button geklickt, isInitialized:", isInitialized, "viewerRef:", !!viewerRef.current)
+            console.log("🔘 zoomOut Funktion verfügbar:", typeof zoomOut === "function")
+            if (isInitialized && viewerRef.current) {
+              console.log("🔘 Rufe zoomOut() auf...")
+              try {
+                zoomOut()
+              } catch (error) {
+                console.error("❌ Fehler beim Aufruf von zoomOut():", error)
+              }
+            } else {
+              console.warn("⚠️ Zoom-Out: Viewer noch nicht initialisiert oder viewerRef null", {
+                isInitialized,
+                hasViewerRef: !!viewerRef.current
+              })
+            }
+          }}
+          onMouseDown={(e) => {
+            // WICHTIG: Nur stopPropagation, kein preventDefault() - sonst wird onClick blockiert
+            e.stopPropagation()
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation()
+          }}
+          disabled={!isInitialized}
+          className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors shadow-lg ${
+            isInitialized
+              ? "bg-card/95 text-foreground border-border hover:bg-accent cursor-pointer"
+              : "bg-card/50 text-muted-foreground border-border/50 cursor-not-allowed opacity-50"
+          }`}
+          title={isInitialized ? "Herauszoomen" : "Wird geladen..."}
+          type="button"
+        >
+          <span className="text-lg font-bold">−</span>
+        </button>
+      </div>
+
+      {/* Overlay Root: pointer-events: none, damit Events durchgehen */}
+      <div 
+        className="absolute inset-0"
+        style={{ 
+          pointerEvents: "none",
+          zIndex: 10
+        }}
+      >
+        {/* Toggle-Buttons */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2" style={{ pointerEvents: "auto", zIndex: 9999 }}>
         <button
           onClick={() => {
             setShowMembers(!showMembers)
@@ -747,6 +1101,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
             </span>
           )}
         </button>
+        </div>
       </div>
 
       {/* Member-Kontakte Sidebar */}
