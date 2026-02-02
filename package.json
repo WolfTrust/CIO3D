@@ -11,7 +11,11 @@
     "copy-cesium": "./copy-cesium-assets.sh",
     "postinstall": "prisma generate && ./copy-cesium-assets.sh || true",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
