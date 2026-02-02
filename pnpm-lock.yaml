@@ -180,9 +180,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.1.9
         version: 4.1.18
-      '@types/cesium':
-        specifier: ^1.70.4
-        version: 1.70.4
       '@types/node':
         specifier: ^22
         version: 22.19.7
@@ -1239,10 +1236,6 @@ packages:
 
   '@tweenjs/tween.js@25.0.0':
     resolution: {integrity: sha512-XKLA6syeBUaPzx4j3qwMqzzq+V4uo72BnlbOjmuljLrRqdsd3qnzvZZoxvMHZ23ndsRS4aufU6JOZYpCbU6T1A==}
-
-  '@types/cesium@1.70.4':
-    resolution: {integrity: sha512-dSBhF5qftTCyB8xYRpumjzeEdEiV0wjDfmLtXF+1cNYUHvn2xs2HcvxCKFCqH6hEcATPWDP0WW6aaCCqrUo9dQ==}
-    deprecated: This is a stub types definition. cesium provides its own type definitions, so you do not need this installed.
 
   '@types/d3-array@3.2.2':
     resolution: {integrity: sha512-hOLWVbm7uRza0BYXpIIW5pxfrKe0W+D5lrFiAEYR+pb6w3N2SwSMaJbXdUfSEv+dT4MfHBLtn5js0LAWaO6otw==}
@@ -2995,10 +2988,6 @@ snapshots:
       tailwindcss: 4.1.18
 
   '@tweenjs/tween.js@25.0.0': {}
-
-  '@types/cesium@1.70.4':
-    dependencies:
-      cesium: 1.137.0
 
   '@types/d3-array@3.2.2': {}
 
