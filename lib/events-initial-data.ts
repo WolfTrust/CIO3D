@@ -1,43 +1,34 @@
 import type { Event } from "./events-store"
 
+/** CIO Ventures 2026 – Eventübersicht (für Admin „Beispiel-Events laden“ und Fallback). */
 export const initialEvents: Omit<Event, "id" | "createdAt" | "updatedAt">[] = [
-  {
-    title: "Strategietagung 2024 - Paris",
-    description: "Jährliche Strategietagung für Führungskräfte. Diskussion über zukünftige Geschäftsstrategien, Marktentwicklung und Innovationen.",
-    city: "Paris",
-    country: "FR",
-    coordinates: [48.8566, 2.3522],
-    startDate: new Date(2024, 5, 15).toISOString(), // 15. Juni 2024
-    endDate: new Date(2024, 5, 17).toISOString(), // 17. Juni 2024
-    imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=600&fit=crop",
-    maxParticipants: 150,
-    category: "strategic",
-    status: "upcoming",
-  },
-  {
-    title: "London Business Summit 2024",
-    description: "Internationales Business Summit mit führenden Experten aus verschiedenen Branchen. Networking, Keynotes und Workshops.",
-    city: "London",
-    country: "GB",
-    coordinates: [51.5074, -0.1278],
-    startDate: new Date(2024, 7, 20).toISOString(), // 20. August 2024
-    endDate: new Date(2024, 7, 22).toISOString(), // 22. August 2024
-    imageUrl: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&h=600&fit=crop",
-    maxParticipants: 200,
-    category: "conference",
-    status: "upcoming",
-  },
-  {
-    title: "New York Innovation Conference",
-    description: "Konferenz über Innovation, Technologie und digitale Transformation. Präsentation neuester Trends und Best Practices.",
-    city: "New York",
-    country: "US",
-    coordinates: [40.7128, -74.0060],
-    startDate: new Date(2024, 9, 10).toISOString(), // 10. Oktober 2024
-    endDate: new Date(2024, 9, 12).toISOString(), // 12. Oktober 2024
-    imageUrl: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&h=600&fit=crop",
-    maxParticipants: 300,
-    category: "conference",
-    status: "upcoming",
-  },
+  { title: "CIO Ventures – Paris", description: "France", city: "Paris", country: "FR", coordinates: [48.8566, 2.3522], startDate: new Date(2026, 0, 27).toISOString(), endDate: new Date(2026, 0, 27).toISOString(), imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Hamburg", description: "Germany – IT Strategy Days (Marquee)", city: "Hamburg", country: "DE", coordinates: [53.5511, 9.9937], startDate: new Date(2026, 1, 19).toISOString(), endDate: new Date(2026, 1, 19).toISOString(), imageUrl: "https://images.unsplash.com/photo-1569025743873-ea3e9ce9c862?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Zurich", description: "Switzerland (Marquee)", city: "Zurich", country: "CH", coordinates: [47.3769, 8.5417], startDate: new Date(2026, 1, 26).toISOString(), endDate: new Date(2026, 1, 26).toISOString(), imageUrl: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Munich", description: "Germany", city: "Munich", country: "DE", coordinates: [48.1351, 11.582], startDate: new Date(2026, 2, 5).toISOString(), endDate: new Date(2026, 2, 5).toISOString(), imageUrl: "https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – New York", description: "USA", city: "New York", country: "US", coordinates: [40.7128, -74.006], startDate: new Date(2026, 2, 12).toISOString(), endDate: new Date(2026, 2, 12).toISOString(), imageUrl: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Düsseldorf", description: "Germany", city: "Düsseldorf", country: "DE", coordinates: [51.2277, 6.7735], startDate: new Date(2026, 3, 9).toISOString(), endDate: new Date(2026, 3, 9).toISOString(), imageUrl: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Milan", description: "Italy", city: "Milan", country: "IT", coordinates: [45.4642, 9.19], startDate: new Date(2026, 3, 21).toISOString(), endDate: new Date(2026, 3, 21).toISOString(), imageUrl: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – London", description: "UK", city: "London", country: "GB", coordinates: [51.5074, -0.1278], startDate: new Date(2026, 3, 23).toISOString(), endDate: new Date(2026, 3, 23).toISOString(), imageUrl: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Palo Alto", description: "USA – Marquee Event @NVIDIA", city: "Palo Alto", country: "US", coordinates: [37.4419, -122.143], startDate: new Date(2026, 4, 7).toISOString(), endDate: new Date(2026, 4, 7).toISOString(), imageUrl: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Madrid", description: "Spain", city: "Madrid", country: "ES", coordinates: [40.4168, -3.7038], startDate: new Date(2026, 4, 14).toISOString(), endDate: new Date(2026, 4, 14).toISOString(), imageUrl: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Eltville am Rhein", description: "Germany – Marquee Event", city: "Eltville am Rhein", country: "DE", coordinates: [50.0264, 8.117], startDate: new Date(2026, 4, 21).toISOString(), endDate: new Date(2026, 4, 22).toISOString(), imageUrl: "https://images.unsplash.com/photo-1461360370896-922f1ef1e42a?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Stockholm", description: "Sweden", city: "Stockholm", country: "SE", coordinates: [59.3293, 18.0686], startDate: new Date(2026, 4, 28).toISOString(), endDate: new Date(2026, 4, 28).toISOString(), imageUrl: "https://images.unsplash.com/photo-1508189860359-777d945909ef?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Amsterdam", description: "Netherlands", city: "Amsterdam", country: "NL", coordinates: [52.3676, 4.9041], startDate: new Date(2026, 5, 4).toISOString(), endDate: new Date(2026, 5, 4).toISOString(), imageUrl: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Berlin", description: "Germany – Marquee Event", city: "Berlin", country: "DE", coordinates: [52.52, 13.405], startDate: new Date(2026, 6, 4).toISOString(), endDate: new Date(2026, 6, 4).toISOString(), imageUrl: "https://images.unsplash.com/photo-1560930950-5cc20e80e122?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Zurich", description: "Switzerland", city: "Zurich", country: "CH", coordinates: [47.3769, 8.5417], startDate: new Date(2026, 7, 25).toISOString(), endDate: new Date(2026, 7, 25).toISOString(), imageUrl: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Hamburg", description: "Germany", city: "Hamburg", country: "DE", coordinates: [53.5511, 9.9937], startDate: new Date(2026, 7, 27).toISOString(), endDate: new Date(2026, 7, 27).toISOString(), imageUrl: "https://images.unsplash.com/photo-1569025743873-ea3e9ce9c862?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Dallas", description: "USA", city: "Dallas", country: "US", coordinates: [32.7767, -96.797], startDate: new Date(2026, 8, 8).toISOString(), endDate: new Date(2026, 8, 8).toISOString(), imageUrl: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Stuttgart", description: "Germany", city: "Stuttgart", country: "DE", coordinates: [48.7758, 9.1829], startDate: new Date(2026, 8, 15).toISOString(), endDate: new Date(2026, 8, 15).toISOString(), imageUrl: "https://images.unsplash.com/photo-1523531294919-4bcd7c65e216?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Amsterdam", description: "Netherlands", city: "Amsterdam", country: "NL", coordinates: [52.3676, 4.9041], startDate: new Date(2026, 8, 24).toISOString(), endDate: new Date(2026, 8, 24).toISOString(), imageUrl: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Oktoberfest", description: "Germany", city: "Munich", country: "DE", coordinates: [48.1351, 11.582], startDate: new Date(2026, 8, 29).toISOString(), endDate: new Date(2026, 8, 29).toISOString(), imageUrl: "https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Frankfurt", description: "Germany", city: "Frankfurt", country: "DE", coordinates: [50.1109, 8.6821], startDate: new Date(2026, 9, 8).toISOString(), endDate: new Date(2026, 9, 8).toISOString(), imageUrl: "https://images.unsplash.com/photo-1616469829581-73993eb86b02?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Milan", description: "Italy", city: "Milan", country: "IT", coordinates: [45.4642, 9.19], startDate: new Date(2026, 9, 25).toISOString(), endDate: new Date(2026, 9, 25).toISOString(), imageUrl: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – London", description: "UK", city: "London", country: "GB", coordinates: [51.5074, -0.1278], startDate: new Date(2026, 9, 30).toISOString(), endDate: new Date(2026, 9, 30).toISOString(), imageUrl: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Paris", description: "France", city: "Paris", country: "FR", coordinates: [48.8566, 2.3522], startDate: new Date(2026, 10, 6).toISOString(), endDate: new Date(2026, 10, 6).toISOString(), imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Boston", description: "USA", city: "Boston", country: "US", coordinates: [42.3601, -71.0589], startDate: new Date(2026, 10, 18).toISOString(), endDate: new Date(2026, 10, 18).toISOString(), imageUrl: "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – New York City", description: "USA", city: "New York", country: "US", coordinates: [40.7128, -74.006], startDate: new Date(2026, 10, 20).toISOString(), endDate: new Date(2026, 10, 20).toISOString(), imageUrl: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Vienna", description: "Austria", city: "Vienna", country: "AT", coordinates: [48.2082, 16.3738], startDate: new Date(2026, 11, 1).toISOString(), endDate: new Date(2026, 11, 1).toISOString(), imageUrl: "https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Rome", description: "Italy", city: "Rome", country: "IT", coordinates: [41.9028, 12.4964], startDate: new Date(2026, 11, 3).toISOString(), endDate: new Date(2026, 11, 3).toISOString(), imageUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
+  { title: "CIO Ventures – Munich", description: "Germany – Marquee Event", city: "Munich", country: "DE", coordinates: [48.1351, 11.582], startDate: new Date(2026, 11, 8).toISOString(), endDate: new Date(2026, 11, 8).toISOString(), imageUrl: "https://images.unsplash.com/photo-1595867818082-083862f3d630?w=800&h=600&fit=crop", category: "conference", status: "upcoming" },
 ]
