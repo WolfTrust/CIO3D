@@ -39,7 +39,7 @@ const positions = [
   "Account Manager", "Key Account Manager", "Regional Manager", "Country Manager", "Product Manager", "Innovation Manager"
 ]
 
-// Erstelle 100 Dummy-Mitglieder
+// Erstelle 80 Dummy-Mitglieder (Beispiel für DB-Seed und lokale Nutzung)
 export function generateDummyMembers(): Member[] {
   const members: Member[] = []
   const usedCities = new Set<string>()
@@ -51,7 +51,7 @@ export function generateDummyMembers(): Member[] {
   // Mische die Städte zufällig
   const shuffledCities = [...availableCities].sort(() => Math.random() - 0.5)
   
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 80; i++) {
     // Verwende verschiedene Städte, wenn möglich
     let selectedCity = shuffledCities[i % shuffledCities.length]
     
@@ -163,8 +163,8 @@ export function generateDummyRelationships(memberIds: string[]): Relationship[] 
     usedMembers.add(fromMemberId)
   }
   
-  // Phase 2: Füge zusätzliche zufällige Beziehungen hinzu (ca. 100 weitere)
-  for (let i = 0; i < 100; i++) {
+  // Phase 2: Füge zusätzliche zufällige Beziehungen hinzu (ca. 80 weitere)
+  for (let i = 0; i < 80; i++) {
     const fromIndex = Math.floor(Math.random() * memberIds.length)
     let toIndex = Math.floor(Math.random() * memberIds.length)
     

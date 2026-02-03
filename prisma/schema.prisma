@@ -26,3 +26,39 @@ model Event {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model Member {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  company     String?
+  position    String?
+  street      String?
+  zipCode     String?
+  city        String?
+  country     String?
+  latitude    Float?
+  longitude   Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  relationshipsFrom Relationship[] @relation("FromMember")
+  relationshipsTo   Relationship[] @relation("ToMember")
+}
+
+model Relationship {
+  id           String   @id @default(cuid())
+  fromMemberId String
+  toMemberId   String
+  type         String   // strategic_partnership | customer_relationship | supplier_relationship | joint_venture | consulting | collaboration | investment | other
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  fromMember   Member   @relation("FromMember", fields: [fromMemberId], references: [id], onDelete: Cascade)
+  toMember     Member   @relation("ToMember", fields: [toMemberId], references: [id], onDelete: Cascade)
+
+  @@index([fromMemberId])
+  @@index([toMemberId])
+}
