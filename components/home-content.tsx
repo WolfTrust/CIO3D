@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react"
 import { Header } from "@/components/header"
-import { Globe as GlobeIcon, Map } from "lucide-react"
 // Direkter Import für D3.js (Standard)
 import { GlobeMap as GlobeMapD3, type GlobeMapHandle } from "@/components/globe-map"
 
@@ -28,12 +27,13 @@ import { WelcomeOverlay } from "@/components/welcome-overlay"
 import { ExploreTab } from "@/components/explore-tab"
 import { YearInReview } from "@/components/year-in-review"
 import { AchievementToast } from "@/components/achievement-toast"
-import { QuickAddButton } from "@/components/quick-add-button"
 import { Onboarding } from "@/components/onboarding"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { Members } from "@/components/members"
 import { Events } from "@/components/events"
 import { EventsAdmin } from "@/components/events-admin"
+import { EventsHydration } from "@/components/events-hydration"
+import { MembersHydration } from "@/components/members-hydration"
 
 export function HomeContent() {
   const [activeTab, setActiveTab] = useState("map")
@@ -42,16 +42,26 @@ export function HomeContent() {
   const [showEventsAdmin, setShowEventsAdmin] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
-  const [showWelcome, setShowWelcome] = useState(true)
+  const [showWelcome, setShowWelcome] = useState(false) // Kein Anfangs-Fenster „Land oder Hauptstadt suchen“
   const [isYearInReviewOpen, setIsYearInReviewOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [useCesiumGlobe, setUseCesiumGlobe] = useState(false) // Toggle für CesiumJS vs D3.js
+  const [useCesiumGlobe, setUseCesiumGlobe] = useState(true) // Cesium als Standard; Umschaltung unter Mehr → Erscheinungsbild
   const globeRef = useRef<GlobeMapHandle>(null)
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]) // Für Cleanup bei Unmount
+  const openedEventFromGlobeRef = useRef(false) // Back aus Event-Detail → zurück zur Globus-Ansicht
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem("cio-venture-onboarding-complete")
     if (!hasSeenOnboarding) {
       setShowOnboarding(true)
+    }
+  }, [])
+
+  // Timeout-Cleanup bei Unmount (vermeidet setState nach Unmount / offene Timer)
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((id) => clearTimeout(id))
+      timeoutsRef.current = []
     }
   }, [])
 
@@ -66,12 +76,14 @@ export function HomeContent() {
 
   const handleSearchSelect = useCallback((countryId: string) => {
     setActiveTab("map")
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       globeRef.current?.flyToCountry(countryId)
-      setTimeout(() => {
+      const t2 = setTimeout(() => {
         setSelectedCountry(countryId)
       }, 1600)
+      timeoutsRef.current.push(t2)
     }, 100)
+    timeoutsRef.current.push(t1)
   }, [])
 
   const handleStartExploring = useCallback(() => {
@@ -81,33 +93,38 @@ export function HomeContent() {
 
   const handleWelcomeCountryClick = useCallback((countryId: string) => {
     setShowWelcome(false)
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       globeRef.current?.flyToCountry(countryId)
-      setTimeout(() => {
+      const t2 = setTimeout(() => {
         setSelectedCountry(countryId)
       }, 1600)
+      timeoutsRef.current.push(t2)
     }, 100)
+    timeoutsRef.current.push(t1)
   }, [])
 
   const handleExploreCountrySelect = useCallback((countryId: string) => {
     setSelectedCountry(countryId)
   }, [])
 
-  const handleQuickAdd = useCallback((countryId: string) => {
-    setActiveTab("map")
-    setShowWelcome(false)
-    setTimeout(() => {
-      globeRef.current?.flyToCountry(countryId)
-    }, 100)
-  }, [])
-
   const handleEventClick = useCallback((eventId: string) => {
+    openedEventFromGlobeRef.current = true
     setSelectedEventId(eventId)
     setActiveTab("events")
   }, [])
 
+  const handleEventSelect = useCallback((eventId: string | null) => {
+    setSelectedEventId(eventId)
+    if (eventId === null && openedEventFromGlobeRef.current) {
+      openedEventFromGlobeRef.current = false
+      setActiveTab("map")
+    }
+  }, [])
+
   return (
     <main className="min-h-screen flex flex-col bg-background">
+      <EventsHydration />
+      <MembersHydration />
       {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
       <OfflineIndicator />
 
@@ -121,28 +138,7 @@ export function HomeContent() {
       <div className="flex-1 overflow-hidden relative">
         {activeTab === "map" && (
           <>
-            {/* Toggle-Button für Globe-Ansicht */}
-            <div className="absolute top-3 right-3 z-30">
-              <button
-                onClick={() => setUseCesiumGlobe(!useCesiumGlobe)}
-                className="px-4 py-2 rounded-lg backdrop-blur-md border bg-card/95 text-foreground border-border hover:bg-accent transition-colors shadow-lg flex items-center gap-2"
-                title={useCesiumGlobe ? "Zu D3.js Globe wechseln" : "Zu CesiumJS Globe wechseln"}
-              >
-                {useCesiumGlobe ? (
-                  <>
-                    <Map className="w-4 h-4" />
-                    <span className="text-sm font-medium">D3.js Globe</span>
-                  </>
-                ) : (
-                  <>
-                    <GlobeIcon className="w-4 h-4" />
-                    <span className="text-sm font-medium">CesiumJS Globe</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Globe-Komponente */}
+            {/* Globe-Komponente (Globen-Auswahl: Mehr → Erscheinungsbild) */}
             {useCesiumGlobe ? (
               <Suspense 
                 fallback={
@@ -181,7 +177,7 @@ export function HomeContent() {
             <EventsAdmin onBack={() => setShowEventsAdmin(false)} />
           ) : (
             <div className="relative h-full">
-              <Events selectedEventId={selectedEventId} onEventSelect={setSelectedEventId} />
+              <Events selectedEventId={selectedEventId} onEventSelect={handleEventSelect} />
               <button
                 onClick={() => setShowEventsAdmin(true)}
                 className="absolute top-4 right-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors shadow-lg z-10"
@@ -197,7 +193,13 @@ export function HomeContent() {
         {activeTab === "stats" && <TravelStatsCharts />}
         {activeTab === "bucket" && <BucketList onCountryClick={handleCountryClick} />}
         {activeTab === "achievements" && <Achievements />}
-        {activeTab === "settings" && <Settings onOpenYearInReview={() => setIsYearInReviewOpen(true)} />}
+        {activeTab === "settings" && (
+          <Settings
+            onOpenYearInReview={() => setIsYearInReviewOpen(true)}
+            useCesiumGlobe={useCesiumGlobe}
+            setUseCesiumGlobe={setUseCesiumGlobe}
+          />
+        )}
 
         <SearchCountries
           isOpen={isSearchOpen}
@@ -212,8 +214,6 @@ export function HomeContent() {
       <YearInReview isOpen={isYearInReviewOpen} onClose={() => setIsYearInReviewOpen(false)} />
 
       <AchievementToast />
-
-      <QuickAddButton onCountryAdded={handleQuickAdd} />
     </main>
   )
 }

@@ -5,14 +5,16 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "build": "next build --webpack",
-    "dev": "next dev -p 3000 --webpack",
+    "dev": "next dev -p 3000 -H 127.0.0.1 --webpack",
+    "dev:3001": "next dev -p 3001 -H 127.0.0.1 --webpack",
     "lint": "eslint .",
     "start": "next start",
     "copy-cesium": "./copy-cesium-assets.sh",
     "postinstall": "prisma generate && ./copy-cesium-assets.sh || true",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:setup-local": "bash scripts/setup-local-db.sh"
   },
   "prisma": {
     "seed": "node prisma/seed.cjs"

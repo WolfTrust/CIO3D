@@ -10,6 +10,7 @@ if (typeof window !== "undefined") {
 export function GlobeBaseline() {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<any>(null) // Cesium.Viewer
+  const removeListenersRef = useRef<Array<() => void>>([]) // Cleanup: Cesium-Event-Listener explizit entfernen
 
   useEffect(() => {
     // Guard: Nur client-side
@@ -168,17 +169,21 @@ export function GlobeBaseline() {
           console.warn("⚠️ Canvas nicht verfügbar für Size-Check")
         }
 
-        // Debug: Render Error Listener
-        viewer.scene.renderError.addEventListener((error: any) => {
-          console.error("❌ Cesium Render Error:", error)
-        })
+        // Debug: Render Error Listener (Remove-Funktion für Cleanup speichern)
+        removeListenersRef.current.push(
+          viewer.scene.renderError.addEventListener((error: any) => {
+            console.error("❌ Cesium Render Error:", error)
+          })
+        )
 
-        // Debug: Tile Load Progress
-        viewer.scene.globe.tileLoadProgressEvent.addEventListener((n: number) => {
-          if (n > 0) {
-            console.log("📦 Tiles loading:", n)
-          }
-        })
+        // Debug: Tile Load Progress (Remove-Funktion für Cleanup speichern)
+        removeListenersRef.current.push(
+          viewer.scene.globe.tileLoadProgressEvent.addEventListener((n: number) => {
+            if (n > 0) {
+              console.log("📦 Tiles loading:", n)
+            }
+          })
+        )
 
         // Configure scene (minimal)
         viewer.scene.globe.enableLighting = true
@@ -324,9 +329,18 @@ export function GlobeBaseline() {
 
     initCesium()
 
-    // Cleanup: destroy viewer und setze viewerRef.current = null
+    // Cleanup: Listener explizit entfernen, dann Viewer zerstören
     return () => {
       isMounted = false
+
+      removeListenersRef.current.forEach((remove) => {
+        try {
+          remove()
+        } catch (e) {
+          console.warn("⚠️ Fehler beim Entfernen eines Cesium-Listeners:", e)
+        }
+      })
+      removeListenersRef.current = []
 
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
         try {

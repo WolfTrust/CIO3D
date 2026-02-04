@@ -23,6 +23,9 @@ function toApiRelationship(r: {
 }
 
 export async function GET() {
+  if (!prisma) {
+    return NextResponse.json([])
+  }
   try {
     const relationships = await prisma.relationship.findMany({
       orderBy: { createdAt: "desc" },
@@ -38,6 +41,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Datenbank nicht verfügbar." }, { status: 503 })
+  }
   try {
     const body = await request.json()
     const { fromMemberId, toMemberId, type, description } = body as Omit<

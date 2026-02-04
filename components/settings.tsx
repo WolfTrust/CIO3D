@@ -4,16 +4,18 @@ import type React from "react"
 
 import { useTravelStore, getStats } from "@/lib/travel-store"
 import { useMemo, useState, useRef } from "react"
-import { Download, Upload, Trash2, Check, AlertCircle, Info, Calendar, RotateCcw } from "lucide-react"
+import { Download, Upload, Trash2, Check, AlertCircle, Info, Calendar, RotateCcw, Globe, Map } from "lucide-react"
 import { UserProfile } from "@/components/user-profile"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ContinentProgress } from "@/components/continent-progress"
 
 interface SettingsProps {
   onOpenYearInReview?: () => void
+  useCesiumGlobe?: boolean
+  setUseCesiumGlobe?: (value: boolean) => void
 }
 
-export function Settings({ onOpenYearInReview }: SettingsProps) {
+export function Settings({ onOpenYearInReview, useCesiumGlobe = true, setUseCesiumGlobe }: SettingsProps) {
   const travels = useTravelStore((state) => state.travels)
   const tripData = useTravelStore((state) => state.tripData)
   const exportData = useTravelStore((state) => state.exportData)
@@ -121,6 +123,33 @@ export function Settings({ onOpenYearInReview }: SettingsProps) {
       <div className="bg-card rounded-xl p-4 border border-border">
         <h3 className="font-medium mb-3">Erscheinungsbild</h3>
         <ThemeToggle />
+        {typeof useCesiumGlobe === "boolean" && setUseCesiumGlobe && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-sm text-muted-foreground mb-2">Globus-Ansicht auf der Karte</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setUseCesiumGlobe(true)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-colors ${
+                  useCesiumGlobe ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                CesiumJS
+              </button>
+              <button
+                type="button"
+                onClick={() => setUseCesiumGlobe(false)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-colors ${
+                  !useCesiumGlobe ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <Map className="w-4 h-4" />
+                D3.js
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Export/Import */}

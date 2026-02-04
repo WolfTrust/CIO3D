@@ -40,6 +40,9 @@ function toApiMember(m: {
 }
 
 export async function GET() {
+  if (!prisma) {
+    return NextResponse.json([])
+  }
   try {
     const members = await prisma.member.findMany({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -55,6 +58,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Datenbank nicht verfügbar." }, { status: 503 })
+  }
   try {
     const body = await request.json()
     const {

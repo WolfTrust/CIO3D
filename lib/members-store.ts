@@ -44,6 +44,8 @@ export interface Relationship {
 interface MembersState {
   members: Member[]
   relationships: Relationship[]
+  setMembers: (members: Member[]) => void
+  setRelationships: (relationships: Relationship[]) => void
   addMember: (member: Omit<Member, "id" | "createdAt" | "updatedAt">) => void
   updateMember: (id: string, member: Partial<Omit<Member, "id" | "createdAt" | "updatedAt">>) => void
   deleteMember: (id: string) => void
@@ -61,6 +63,18 @@ export const useMembersStore = create<MembersState>()(
     (set, get) => ({
       members: [],
       relationships: [],
+
+      setMembers: (members) => {
+        set({
+          members: [...members].sort((a, b) =>
+            `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`)
+          ),
+        })
+      },
+
+      setRelationships: (relationships) => {
+        set({ relationships: [...relationships] })
+      },
 
       addMember: (member) => {
         const now = new Date().toISOString()

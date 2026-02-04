@@ -6,7 +6,7 @@ import { useTravelStore, type TravelStatus, type TravelLocation } from "@/lib/tr
 import { useMembersStore, type Member, type Relationship } from "@/lib/members-store"
 import { useEventsStore } from "@/lib/events-store"
 import { countries } from "@/lib/countries-data"
-import { Network, Calendar, Flag, X, Users, Building2, Link2, Mail, Phone, MapPin } from "lucide-react"
+import { Network, Calendar, Flag, X, Users, Building2, Link2, Mail, Phone, MapPin, Layers } from "lucide-react"
 
 // Set Cesium base URL for assets (wird im Browser gesetzt)
 if (typeof window !== "undefined") {
@@ -50,12 +50,15 @@ interface EventPin {
 export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function GlobeMap({ onCountryClick, selectedCountry, onEventClick }, ref) {
   const cesiumContainerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<any>(null) // Cesium.Viewer
+  const hoveredEntityRef = useRef<any>(null) // Ref für Hover-Cleanup (Label ausblenden), vermeidet Listener-Leak
   const [isInitialized, setIsInitialized] = useState(false)
   const [hoveredEntity, setHoveredEntity] = useState<any>(null) // Cesium.Entity
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [showRelationships, setShowRelationships] = useState(false)
   const [showEvents, setShowEvents] = useState(false)
   const [showMembers, setShowMembers] = useState(true)
+  const [layerMenuOpen, setLayerMenuOpen] = useState(false)
+  const layerMenuRef = useRef<HTMLDivElement>(null)
 
   const travels = useTravelStore((state) => state.travels)
   const tripData = useTravelStore((state) => state.tripData)
@@ -581,15 +584,57 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
     }
   }, []) // WICHTIG: Leeres Array - nur einmal beim Mount, nicht bei isInitialized-Änderungen
 
-  // Add location pins
+  // Layer-Menü schließen bei Klick außerhalb
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (layerMenuRef.current && !layerMenuRef.current.contains(e.target as Node)) {
+        setLayerMenuOpen(false)
+      }
+    }
+    if (layerMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [layerMenuOpen])
+
+  // Expliziter Left-Click-Handler: Event- und Member-Pin-Klicks per scene.pick (sonst wird z. B. Member-Sidebar nicht geöffnet)
+  useEffect(() => {
+    if (!viewerRef.current || !isInitialized) return
+    const viewer = viewerRef.current
+    const Cesium = (viewer as any).cesium
+    if (!Cesium || !viewer.scene.canvas) return
+    const handler = new (Cesium as any).ScreenSpaceEventHandler(viewer.scene.canvas)
+    handler.setInputAction((click: { position: { x: number; y: number } }) => {
+      const picked = viewer.scene.pick(click.position)
+      if (!picked || !(Cesium as any).defined(picked.id) || !picked.id.id) return
+      const id = String(picked.id.id)
+      if (id.startsWith("event-pin-") && onEventClick) {
+        onEventClick(id.replace("event-pin-", ""))
+      } else if (id.startsWith("member-pin-")) {
+        const memberId = id.replace("member-pin-", "")
+        setSelectedMemberId(memberId)
+        setShowRelationships(true)
+        setShowEvents(false)
+      }
+    }, (Cesium as any).ScreenSpaceEventType.LEFT_CLICK)
+    return () => {
+      try {
+        handler.destroy()
+      } catch (_) {}
+    }
+  }, [isInitialized, onEventClick])
+
+  // Add location pins (mit Cleanup: Listener entfernen, verhindert EMFILE/Performance-Leak)
   useEffect(() => {
     if (!viewerRef.current || !isInitialized) return
 
     const viewer = viewerRef.current
     const Cesium = (viewer as any).cesium
     if (!Cesium) return
-    
+
     const entities = viewer.entities
+    const canvas = viewer.cesiumWidget?.canvas
+    if (!canvas) return
 
     // Remove existing location pins
     const existingPins = entities.values.filter((e: any) => e.id?.startsWith("location-pin-"))
@@ -625,8 +670,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       })
     })
 
-    // Add click handlers
-    viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
+    // Cesium addEventListener gibt Remove-Funktion zurück – für Cleanup speichern
+    const removeSelectedEntityListener = viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
       if (selectedEntity && selectedEntity.id?.startsWith("location-pin-")) {
         const pinId = selectedEntity.id.replace("location-pin-", "")
         const pin = locationPins.find(p => p.id === pinId)
@@ -636,23 +681,32 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       }
     })
 
-    // Add hover handlers
-    viewer.cesiumWidget.canvas.addEventListener("mousemove", (event: MouseEvent) => {
+    // Stabile Handler-Referenz für mousemove, damit removeEventListener dieselbe Funktion entfernt
+    const handleMousemove = (event: MouseEvent) => {
       const pickedObject = viewer.scene.pick(new (Cesium as any).Cartesian2(event.clientX, event.clientY))
       if (pickedObject && (Cesium as any).defined(pickedObject.id) && pickedObject.id.id?.startsWith("location-pin-")) {
         const entity = pickedObject.id as any
         if (entity.label) {
           entity.label.show = true
         }
+        hoveredEntityRef.current = entity
         setHoveredEntity(entity)
       } else {
-        if (hoveredEntity && hoveredEntity.label) {
-          hoveredEntity.label.show = false
-          setHoveredEntity(null)
+        const prev = hoveredEntityRef.current
+        if (prev?.label) {
+          prev.label.show = false
         }
+        hoveredEntityRef.current = null
+        setHoveredEntity(null)
       }
-    })
-  }, [locationPins, isInitialized, onCountryClick, hoveredEntity])
+    }
+    canvas.addEventListener("mousemove", handleMousemove)
+
+    return () => {
+      removeSelectedEntityListener()
+      canvas.removeEventListener("mousemove", handleMousemove)
+    }
+  }, [locationPins, isInitialized, onCountryClick])
 
   // Add/remove member pins (beim Ausschalten von „Mitglieder“ Pins entfernen)
   useEffect(() => {
@@ -679,12 +733,12 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
       entities.add({
         id: `member-pin-${memberPin.id}`,
-        position: Cesium.Cartesian3.fromDegrees(lon, lat, 1000),
+        position: Cesium.Cartesian3.fromDegrees(lon, lat),
         billboard: {
           image: createMemberPinImage(),
           width: 32,
           height: 32,
-          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         label: {
@@ -701,8 +755,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       })
     })
 
-    // Update click handler
-    viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
+    // Cesium addEventListener gibt Remove-Funktion zurück – für Cleanup speichern
+    const removeMemberSelectedListener = viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
       if (selectedEntity && selectedEntity.id?.startsWith("member-pin-")) {
         const memberId = selectedEntity.id.replace("member-pin-", "")
         setSelectedMemberId(memberId)
@@ -710,6 +764,10 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         setShowEvents(false)
       }
     })
+
+    return () => {
+      removeMemberSelectedListener()
+    }
   }, [memberPins, showMembers, showEvents, isInitialized, selectedMemberId])
 
   // Add event pins
@@ -732,12 +790,12 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
       entities.add({
         id: `event-pin-${eventPin.id}`,
-        position: Cesium.Cartesian3.fromDegrees(lon, lat, 1000),
+        position: Cesium.Cartesian3.fromDegrees(lon, lat),
         billboard: {
           image: createEventPinImage(),
           width: 40,
           height: 40,
-          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         label: {
@@ -754,8 +812,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       })
     })
 
-    // Update click handler
-    viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
+    // Cesium addEventListener gibt Remove-Funktion zurück – für Cleanup speichern
+    const removeEventSelectedListener = viewer.selectedEntityChanged.addEventListener((selectedEntity: any) => {
       if (selectedEntity && selectedEntity.id?.startsWith("event-pin-")) {
         const eventId = selectedEntity.id.replace("event-pin-", "")
         if (onEventClick) {
@@ -763,6 +821,10 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         }
       }
     })
+
+    return () => {
+      removeEventSelectedListener()
+    }
   }, [eventPins, showEvents, isInitialized, onEventClick])
 
   // Add/remove relationship lines (beim Ausschalten von „Beziehungen“ Linien entfernen)
@@ -1028,81 +1090,73 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         </button>
       </div>
 
-      {/* Overlay Root: pointer-events: none, damit Events durchgehen */}
-      <div 
-        className="absolute inset-0"
-        style={{ 
-          pointerEvents: "none",
-          zIndex: 10
-        }}
-      >
-        {/* Toggle-Buttons */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2" style={{ pointerEvents: "auto", zIndex: 9999 }}>
-        <button
-          onClick={() => {
-            setShowMembers(!showMembers)
-            if (!showMembers) {
-              setShowEvents(false)
-            }
-          }}
-          className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
-            showMembers && !showEvents
-              ? "bg-primary/90 text-primary-foreground border-primary"
-              : "bg-card/95 text-foreground border-border hover:bg-accent"
-          }`}
-          title="Mitglieder anzeigen"
-        >
-          <Users className="w-4 h-4 inline mr-2" />
-          <span className="text-sm font-medium">Mitglieder</span>
-          {memberPins.length > 0 && showMembers && !showEvents && (
-            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">
-              {memberPins.length}
-            </span>
+      {/* Layer-Button mit Dropdown – kein Vollbild-Overlay, damit Klicks auf Event-/Member-Pins durchgehen */}
+      <div ref={layerMenuRef} className="absolute top-3 left-3 z-20">
+          <button
+            type="button"
+            onClick={() => setLayerMenuOpen((o) => !o)}
+            className="px-3 py-2 rounded-lg backdrop-blur-md border bg-card/95 text-foreground border-border hover:bg-accent transition-colors flex items-center gap-2 shadow-lg"
+            title="Kartenlayer"
+          >
+            <Layers className="w-4 h-4" />
+            <span className="text-sm font-medium">Anzeige</span>
+          </button>
+          {layerMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 min-w-[200px] py-1 rounded-lg border border-border bg-card/95 backdrop-blur-md shadow-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMembers(!showMembers)
+                  if (!showMembers) setShowEvents(false)
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                  showMembers && !showEvents ? "bg-primary/15 text-primary font-medium" : "text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Mitglieder
+                </span>
+                {memberPins.length > 0 && showMembers && !showEvents && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">{memberPins.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRelationships(!showRelationships)}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                  showRelationships || selectedMemberId ? "bg-primary/15 text-primary font-medium" : "text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <Network className="w-4 h-4" />
+                  Beziehungen
+                </span>
+                {filteredRelationships.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">{filteredRelationships.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEvents(!showEvents)
+                  if (!showEvents) setShowMembers(false)
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                  showEvents ? "bg-primary/15 text-primary font-medium" : "text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Events
+                </span>
+                {eventPins.length > 0 && showEvents && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">{eventPins.length}</span>
+                )}
+              </button>
+            </div>
           )}
-        </button>
-
-        <button
-          onClick={() => setShowRelationships(!showRelationships)}
-          className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
-            showRelationships || selectedMemberId
-              ? "bg-primary/90 text-primary-foreground border-primary"
-              : "bg-card/95 text-foreground border-border hover:bg-accent"
-          }`}
-          title="Beziehungen anzeigen"
-        >
-          <Network className="w-4 h-4 inline mr-2" />
-          <span className="text-sm font-medium">Beziehungen</span>
-          {filteredRelationships.length > 0 && (
-            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">
-              {filteredRelationships.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            setShowEvents(!showEvents)
-            if (!showEvents) {
-              setShowMembers(false)
-            }
-          }}
-          className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
-            showEvents
-              ? "bg-primary/90 text-primary-foreground border-primary"
-              : "bg-card/95 text-foreground border-border hover:bg-accent"
-          }`}
-          title="Upcoming Events anzeigen"
-        >
-          <Calendar className="w-4 h-4 inline mr-2" />
-          <span className="text-sm font-medium">Events</span>
-          {eventPins.length > 0 && showEvents && (
-            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">
-              {eventPins.length}
-            </span>
-          )}
-        </button>
         </div>
-      </div>
 
       {/* Member-Kontakte Sidebar */}
       {selectedMemberId && selectedMember && (

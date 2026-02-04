@@ -43,6 +43,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Member nicht gefunden." }, { status: 404 })
+  }
   try {
     const { id } = await params
     const member = await prisma.member.findUnique({ where: { id } })
@@ -63,6 +66,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Datenbank nicht verfügbar." }, { status: 503 })
+  }
   try {
     const { id } = await params
     const body = await request.json()
@@ -106,6 +112,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!prisma) {
+    return NextResponse.json({ error: "Datenbank nicht verfügbar." }, { status: 503 })
+  }
   try {
     const { id } = await params
     await prisma.member.delete({ where: { id } })

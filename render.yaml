@@ -3,7 +3,7 @@ services:
     name: cio-venture
     env: node
     plan: starter
-    buildCommand: pnpm install && pnpm run db:push && pnpm build
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm run db:push && pnpm build
     startCommand: pnpm start
     envVars:
       - key: NODE_ENV

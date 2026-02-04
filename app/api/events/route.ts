@@ -38,6 +38,9 @@ function toApiEvent(e: {
 }
 
 export async function GET() {
+  if (!prisma) {
+    return NextResponse.json([])
+  }
   try {
     const events = await prisma.event.findMany({
       orderBy: { startDate: "asc" },
@@ -53,6 +56,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!prisma) {
+    return NextResponse.json(
+      { error: "Datenbank nicht verfügbar." },
+      { status: 503 }
+    )
+  }
   try {
     const body = await request.json()
     const {

@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from "react"
 import { useMembersStore, type Member, type Relationship, type RelationshipType } from "@/lib/members-store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Edit2, Trash2, X, Save, Users, Mail, Phone, Building2, MapPin, Download, Link2, Network } from "lucide-react"
+import { Plus, Edit2, Trash2, X, Save, Users, Mail, Phone, Building2, MapPin, Download, Link2, Network, RotateCcw } from "lucide-react"
 import { searchCities, findCityByName, type CityData } from "@/lib/city-coordinates"
 import { generateDummyMembers, generateDummyRelationships } from "@/lib/members-dummy-data"
 
 export function Members() {
   const members = useMembersStore((state) => state.members)
+  const setMembers = useMembersStore((state) => state.setMembers)
+  const setRelationships = useMembersStore((state) => state.setRelationships)
   const addMember = useMembersStore((state) => state.addMember)
   const updateMember = useMembersStore((state) => state.updateMember)
   const deleteMember = useMembersStore((state) => state.deleteMember)
@@ -55,6 +57,13 @@ export function Members() {
     notes: "",
   })
 
+  // Mitglieder-Daten leeren und aus DB neu laden (überschreibt localStorage)
+  const handleResetAndReloadFromDb = () => {
+    if (!confirm("Lokale Mitglieder-Daten zurücksetzen und aus der Datenbank neu laden?\n\nDie aktuell angezeigten Daten werden verworfen; danach werden die Daten aus der DB (z. B. 80 Mitglieder) geladen.")) return
+    localStorage.removeItem("cio-venture-members")
+    window.location.reload()
+  }
+
   // Stadt-Autocomplete
   useEffect(() => {
     if (formData.city && formData.city.length >= 2) {
@@ -83,11 +92,11 @@ export function Members() {
     console.log("Lade Dummy-Daten...", members.length)
     
     try {
-      // Wenn bereits 100+ Mitglieder vorhanden sind, frage ob neu geladen werden soll
-      if (members.length >= 100) {
+      // Wenn bereits 80+ Mitglieder vorhanden sind, frage ob neu geladen werden soll
+      if (members.length >= 80) {
         const confirmReload = confirm(
-          "Es sind bereits 100 oder mehr Mitglieder vorhanden. Möchten Sie die Dummy-Daten trotzdem neu laden?\n\n" +
-          "Hinweis: Dies fügt weitere Mitglieder hinzu, wenn noch nicht alle 100 vorhanden sind."
+          "Es sind bereits 80 oder mehr Mitglieder vorhanden. Möchten Sie die Dummy-Daten trotzdem neu laden?\n\n" +
+          "Hinweis: Dies fügt weitere Mitglieder hinzu, wenn noch nicht alle 80 vorhanden sind."
         )
         if (!confirmReload) {
           return
@@ -105,7 +114,7 @@ export function Members() {
       console.log("Neue Mitglieder zum Hinzufügen:", newMembers.length)
       
       if (newMembers.length === 0) {
-        alert("Alle 100 Dummy-Mitglieder sind bereits vorhanden!")
+        alert("Alle 80 Dummy-Mitglieder sind bereits vorhanden!")
         return
       }
       
@@ -278,11 +287,21 @@ export function Members() {
               <Download className="w-4 h-4 mr-1.5" />
               <span className="whitespace-nowrap">
                 {members.length === 0 
-                  ? "100 Dummy-Mitglieder laden" 
-                  : members.length >= 100 
+                  ? "80 Dummy-Mitglieder laden" 
+                  : members.length >= 80 
                     ? "Dummy-Daten neu laden" 
-                    : `${100 - members.length} weitere laden`}
+                    : `${80 - members.length} weitere laden`}
               </span>
+            </Button>
+            <Button
+              onClick={handleResetAndReloadFromDb}
+              size="sm"
+              variant="outline"
+              className="flex-1 sm:flex-initial"
+              title="Lokale Daten leeren und 80 Mitglieder aus der Datenbank laden"
+            >
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Aus DB neu laden
             </Button>
             <Button onClick={() => handleOpenForm()} size="sm" className="flex-1 sm:flex-initial">
               <Plus className="w-4 h-4 mr-1" />

@@ -1,19 +1,29 @@
 import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | null }
 
-function createPrisma() {
+function createPrisma(): PrismaClient | null {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not set")
+    if (process.env.NODE_ENV === "development") {
+      console.warn("DATABASE_URL nicht gesetzt – API liefert leere Daten, App läuft ohne DB.")
+    }
+    return null
   }
-  const adapter = new PrismaPg({ connectionString })
-  return new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  })
+  try {
+    const adapter = new PrismaPg({ connectionString })
+    return new PrismaClient({
+      adapter,
+      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    })
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Prisma-Initialisierung fehlgeschlagen – App läuft ohne DB:", e)
+    }
+    return null
+  }
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrisma()
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+export const prisma: PrismaClient | null = globalForPrisma.prisma ?? createPrisma()
+if (process.env.NODE_ENV !== "production" && prisma) globalForPrisma.prisma = prisma

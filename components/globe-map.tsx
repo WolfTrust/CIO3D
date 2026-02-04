@@ -9,7 +9,7 @@ import { countries, alpha3ToCountryId } from "@/lib/countries-data"
 import * as d3 from "d3"
 import * as topojson from "topojson-client"
 import type { Topology, GeometryCollection } from "topojson-specification"
-import { Network, Calendar, Flag, X, Users, Building2, Link2, Mail, Phone, MapPin } from "lucide-react"
+import { Network, Calendar, Flag, X, Users, Building2, Link2, Mail, Phone, MapPin, Layers } from "lucide-react"
 import type { GeoPermissibleObjects } from "d3"
 import type { GeoJSON } from "geojson"
 
@@ -88,6 +88,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
   const [hoveredEvent, setHoveredEvent] = useState<EventPin | null>(null)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null) // Ausgewähltes Mitglied
   const [globeStyle, setGlobeStyle] = useState<"styled" | "standard">("standard") // Globus-Darstellung: Standard (realistisch) oder stilisierte
+  const [layerMenuOpen, setLayerMenuOpen] = useState(false)
+  const layerMenuRef = useRef<HTMLDivElement>(null)
   const rotationRef = useRef<[number, number, number]>(rotation) // Ref für Performance-Optimierung
   const renderRequestRef = useRef<number | null>(null) // Ref für requestAnimationFrame
 
@@ -243,6 +245,19 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           })
       })
   }, [])
+
+  // Layer-Menü schließen bei Klick außerhalb
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (layerMenuRef.current && !layerMenuRef.current.contains(e.target as Node)) {
+        setLayerMenuOpen(false)
+      }
+    }
+    if (layerMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [layerMenuOpen])
 
   // Country ID mapping from Natural Earth numeric IDs
   const numericToAlpha3: Record<string, string> = useMemo(
@@ -1827,75 +1842,74 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
             <span className="text-sm font-medium">🌍 {globeStyle === "styled" ? "Standard" : "Stilisiert"}</span>
           </button>
 
-          {/* Member-Toggle */}
-          <button
-            onClick={() => {
-              setShowMembers(!showMembers)
-              // Wenn Member aktiviert werden, Events deaktivieren
-              if (!showMembers) {
-                setShowEvents(false)
-              }
-            }}
-            className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
-              showMembers && !showEvents
-                ? "bg-primary/90 text-primary-foreground border-primary"
-                : "bg-card/95 text-foreground border-border hover:bg-accent"
-            }`}
-            title="Mitglieder anzeigen"
-          >
-            <Users className="w-4 h-4 inline mr-2" />
-            <span className="text-sm font-medium">Mitglieder</span>
-            {memberPins.length > 0 && showMembers && !showEvents && (
-              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">
-                {memberPins.length}
-              </span>
+          {/* Layer-Button mit Dropdown (Mitglieder, Beziehungen, Events) */}
+          <div ref={layerMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setLayerMenuOpen((o) => !o)}
+              className="px-3 py-2 rounded-lg backdrop-blur-md border bg-card/95 text-foreground border-border hover:bg-accent transition-colors flex items-center gap-2"
+              title="Kartenlayer"
+            >
+              <Layers className="w-4 h-4" />
+              <span className="text-sm font-medium">Anzeige</span>
+            </button>
+            {layerMenuOpen && (
+              <div className="absolute top-full left-0 mt-1 min-w-[200px] py-1 rounded-lg border border-border bg-card/95 backdrop-blur-md shadow-xl z-30">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMembers(!showMembers)
+                    if (!showMembers) setShowEvents(false)
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                    showMembers && !showEvents ? "bg-primary/15 text-primary font-medium" : "text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Mitglieder
+                  </span>
+                  {memberPins.length > 0 && showMembers && !showEvents && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">{memberPins.length}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRelationships(!showRelationships)}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                    showRelationships || selectedMemberId ? "bg-primary/15 text-primary font-medium" : "text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Network className="w-4 h-4" />
+                    Beziehungen
+                  </span>
+                  {filteredRelationships.length > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">{filteredRelationships.length}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEvents(!showEvents)
+                    if (!showEvents) setShowMembers(false)
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
+                    showEvents ? "bg-primary/15 text-primary font-medium" : "text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Events
+                  </span>
+                  {eventPins.length > 0 && showEvents && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">{eventPins.length}</span>
+                  )}
+                </button>
+              </div>
             )}
-          </button>
+          </div>
 
-          {/* Beziehungen-Toggle */}
-          <button
-            onClick={() => setShowRelationships(!showRelationships)}
-            className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
-              showRelationships || selectedMemberId
-                ? "bg-primary/90 text-primary-foreground border-primary"
-                : "bg-card/95 text-foreground border-border hover:bg-accent"
-            }`}
-            title="Beziehungen anzeigen"
-          >
-            <Network className="w-4 h-4 inline mr-2" />
-            <span className="text-sm font-medium">Beziehungen</span>
-            {filteredRelationships.length > 0 && (
-              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">
-                {filteredRelationships.length}
-              </span>
-            )}
-          </button>
-
-          {/* Events-Toggle */}
-          <button
-            onClick={() => {
-              setShowEvents(!showEvents)
-              // Wenn Events aktiviert werden, Member deaktivieren
-              if (!showEvents) {
-                setShowMembers(false)
-              }
-            }}
-            className={`px-3 py-2 rounded-lg backdrop-blur-md border transition-colors ${
-              showEvents
-                ? "bg-primary/90 text-primary-foreground border-primary"
-                : "bg-card/95 text-foreground border-border hover:bg-accent"
-            }`}
-            title="Upcoming Events anzeigen"
-          >
-            <Calendar className="w-4 h-4 inline mr-2" />
-            <span className="text-sm font-medium">Events</span>
-            {eventPins.length > 0 && showEvents && (
-              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary/20 text-xs">
-                {eventPins.length}
-              </span>
-            )}
-          </button>
-          
           {(showRelationships || selectedCountry || selectedMemberId) && (
             <div className="bg-card/95 backdrop-blur-md border border-border rounded-lg p-3 space-y-2 min-w-[200px]">
               <p className="text-xs font-semibold text-muted-foreground mb-2">Beziehungstypen:</p>
