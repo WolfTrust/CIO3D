@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { normalizeLatLngFromDb } from "@/lib/coordinates"
 import type { Member as ApiMember } from "@/lib/members-store"
 
 function toApiMember(m: {
@@ -32,7 +33,7 @@ function toApiMember(m: {
     zipCode: m.zipCode ?? undefined,
     city: m.city ?? undefined,
     country: m.country ?? undefined,
-    coordinates: m.latitude != null && m.longitude != null ? [m.latitude, m.longitude] : undefined,
+    coordinates: normalizeLatLngFromDb(m.latitude, m.longitude),
     notes: m.notes ?? undefined,
     createdAt: m.createdAt.toISOString(),
     updatedAt: m.updatedAt.toISOString(),

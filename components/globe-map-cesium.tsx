@@ -6,6 +6,7 @@ import { useTravelStore, type TravelStatus, type TravelLocation } from "@/lib/tr
 import { useMembersStore, type Member, type Relationship } from "@/lib/members-store"
 import { useEventsStore } from "@/lib/events-store"
 import { countries } from "@/lib/countries-data"
+import { normalizeLatLng } from "@/lib/coordinates"
 import { Network, Calendar, Flag, X, Users, Building2, Link2, Mail, Phone, MapPin, Layers } from "lucide-react"
 
 // Set Cesium base URL for assets (wird im Browser gesetzt)
@@ -78,7 +79,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
               id: loc.id,
               name: loc.name,
               countryId,
-              coordinates: loc.coordinates,
+              coordinates: normalizeLatLng(loc.coordinates),
               type: loc.type,
             })
           }
@@ -107,7 +108,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       id: member.id,
       name: `${member.firstName} ${member.lastName}`,
       city: member.city!,
-      coordinates: member.coordinates!,
+      coordinates: normalizeLatLng(member.coordinates!),
     }))
   }, [members, selectedCountry, selectedMemberId, showMembers])
 
@@ -130,7 +131,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       title: event.title,
       city: event.city,
       countryId: event.country || "",
-      coordinates: event.coordinates!,
+      coordinates: normalizeLatLng(event.coordinates!),
       startDate: event.startDate,
     }))
   }, [showEvents, events, selectedCountry, getUpcomingEvents])
@@ -654,7 +655,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           outlineColor: Cesium.Color.WHITE,
           outlineWidth: 2,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          disableDepthTestDistance: 10000,
         },
         label: {
           text: pin.name,
@@ -739,7 +740,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           width: 32,
           height: 32,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          disableDepthTestDistance: 10000,
         },
         label: {
           text: memberPin.name,
@@ -796,7 +797,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           width: 40,
           height: 40,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          disableDepthTestDistance: 10000,
         },
         label: {
           text: eventPin.title,
@@ -854,8 +855,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       const toMember = membersMap.get(rel.toMemberId)
 
       if (fromMember?.coordinates && toMember?.coordinates) {
-        const [fromLat, fromLon] = fromMember.coordinates
-        const [toLat, toLon] = toMember.coordinates
+        const [fromLat, fromLon] = normalizeLatLng(fromMember.coordinates)
+        const [toLat, toLon] = normalizeLatLng(toMember.coordinates)
         const color = getRelationshipColor(rel.type)
 
         entities.add({
@@ -1158,24 +1159,31 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
           )}
         </div>
 
-      {/* Member-Kontakte Sidebar */}
+      {/* Member-Kontakte Sidebar – pointer-events: auto damit Schließen-Button klickbar bleibt */}
       {selectedMemberId && selectedMember && (
-        <div className="absolute right-0 top-0 h-full w-80 bg-card border-l border-border shadow-lg flex flex-col z-30">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div>
+        <div
+          className="absolute right-0 top-0 h-full w-80 bg-card border-l border-border shadow-lg flex flex-col z-[100]"
+          style={{ pointerEvents: "auto" }}
+        >
+          <div className="p-4 border-b border-border flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg">{selectedMember.firstName} {selectedMember.lastName}</h3>
               {selectedMember.company && (
                 <p className="text-sm text-muted-foreground">{selectedMember.company}</p>
               )}
             </div>
-            <button 
+            <button
+              type="button"
               onClick={() => {
                 setSelectedMemberId(null)
                 setShowRelationships(false)
-              }} 
-              className="p-1 rounded-full hover:bg-secondary transition-colors"
+              }}
+              className="shrink-0 p-2 rounded-lg hover:bg-secondary transition-colors flex items-center gap-1.5 border border-transparent hover:border-border"
+              title="Schließen"
+              aria-label="Fenster schließen"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
+              <span className="text-sm font-medium">Schließen</span>
             </button>
           </div>
 

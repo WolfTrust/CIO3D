@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { normalizeLatLng } from "@/lib/coordinates"
 import type { Event as ApiEvent } from "@/lib/events-store"
 
 function toApiEvent(e: {
@@ -25,7 +26,7 @@ function toApiEvent(e: {
     description: e.description,
     city: e.city,
     country: e.country,
-    coordinates: [e.latitude, e.longitude],
+    coordinates: normalizeLatLng([e.latitude, e.longitude]),
     startDate: e.startDate.toISOString(),
     endDate: e.endDate.toISOString(),
     imageUrl: e.imageUrl ?? undefined,

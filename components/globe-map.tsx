@@ -6,6 +6,7 @@ import { useTravelStore, type TravelStatus, type TravelLocation } from "@/lib/tr
 import { useMembersStore } from "@/lib/members-store"
 import { useEventsStore } from "@/lib/events-store"
 import { countries, alpha3ToCountryId } from "@/lib/countries-data"
+import { normalizeLatLng } from "@/lib/coordinates"
 import * as d3 from "d3"
 import * as topojson from "topojson-client"
 import type { Topology, GeometryCollection } from "topojson-specification"
@@ -103,7 +104,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
               id: loc.id,
               name: loc.name,
               countryId,
-              coordinates: loc.coordinates,
+              coordinates: normalizeLatLng(loc.coordinates),
               type: loc.type,
             })
           }
@@ -140,7 +141,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       id: member.id,
       name: `${member.firstName} ${member.lastName}`,
       city: member.city!,
-      coordinates: member.coordinates!,
+      coordinates: normalizeLatLng(member.coordinates!),
     }))
   }, [members, selectedCountry, selectedMemberId, showMembers])
 
@@ -173,7 +174,7 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
       id: event.id,
       title: event.title,
       city: event.city,
-      coordinates: event.coordinates!,
+      coordinates: normalizeLatLng(event.coordinates!),
       startDate: event.startDate,
     }))
     console.log("Event Pins:", pins.length, pins)
@@ -1492,10 +1493,12 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         if (!fromMember?.coordinates || !toMember?.coordinates) {
           return
         }
+        const fromCoords = normalizeLatLng(fromMember.coordinates)
+        const toCoords = normalizeLatLng(toMember.coordinates)
         
-        // Projektion der Koordinaten
-        const fromProjected = projection([fromMember.coordinates[1], fromMember.coordinates[0]])
-        const toProjected = projection([toMember.coordinates[1], toMember.coordinates[0]])
+        // Projektion der Koordinaten [lat, lng] -> D3 erwartet [lon, lat]
+        const fromProjected = projection([fromCoords[1], fromCoords[0]])
+        const toProjected = projection([toCoords[1], toCoords[0]])
         
         if (!fromProjected || !toProjected) {
           return
@@ -1505,11 +1508,11 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
         let isVisible = true
         if (!useFlatProjection) {
           const fromDistance = d3.geoDistance(
-            [fromMember.coordinates[1], fromMember.coordinates[0]],
+            [fromCoords[1], fromCoords[0]],
             [-currentRotation[0], -currentRotation[1]]
           )
           const toDistance = d3.geoDistance(
-            [toMember.coordinates[1], toMember.coordinates[0]],
+            [toCoords[1], toCoords[0]],
             [-currentRotation[0], -currentRotation[1]]
           )
           // Zeige Linie nur wenn beide Punkte sichtbar sind
@@ -1536,8 +1539,8 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
               .lower()
           } else {
             // Bei Globus-Ansicht: Great Circle Arc
-            const start: [number, number] = [fromMember.coordinates[1], fromMember.coordinates[0]]
-            const end: [number, number] = [toMember.coordinates[1], toMember.coordinates[0]]
+            const start: [number, number] = [fromCoords[1], fromCoords[0]]
+            const end: [number, number] = [toCoords[1], toCoords[0]]
             
             // Erstelle eine Linie zwischen den Punkten (LineString)
             const lineData = {
@@ -2076,19 +2079,23 @@ export const GlobeMap = forwardRef<GlobeMapHandle, GlobeMapProps>(function Globe
 
       {/* Member-Kontakte Sidebar */}
       {selectedMemberId && selectedMember && (
-        <div className="absolute right-0 top-0 h-full w-80 bg-card border-l border-border shadow-lg flex flex-col z-30">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div>
+        <div className="absolute right-0 top-0 h-full w-80 bg-card border-l border-border shadow-lg flex flex-col z-[100]">
+          <div className="p-4 border-b border-border flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg">{selectedMember.firstName} {selectedMember.lastName}</h3>
               {selectedMember.company && (
                 <p className="text-sm text-muted-foreground">{selectedMember.company}</p>
               )}
             </div>
-            <button 
-              onClick={() => setSelectedMemberId(null)} 
-              className="p-1 rounded-full hover:bg-secondary transition-colors"
+            <button
+              type="button"
+              onClick={() => setSelectedMemberId(null)}
+              className="shrink-0 p-2 rounded-lg hover:bg-secondary transition-colors flex items-center gap-1.5 border border-transparent hover:border-border"
+              title="Schließen"
+              aria-label="Fenster schließen"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
+              <span className="text-sm font-medium">Schließen</span>
             </button>
           </div>
 
